@@ -36,7 +36,7 @@ export class KhodkarCLI {
     this.program
       .name('khodkar')
       .description('Extract business rules and logic from codebases for customer support knowledge bases')
-      .version('1.0.0');
+      .version('1.0.3');
 
     this.program
       .command('analyze')
