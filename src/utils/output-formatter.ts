@@ -5,7 +5,7 @@ import {
   BusinessRule, 
   Output, 
   FileSystemError 
-} from '@/types';
+} from '../types';
 
 export interface FormatterOptions {
   includeMetadata?: boolean;

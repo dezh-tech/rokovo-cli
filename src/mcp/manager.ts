@@ -1,5 +1,6 @@
-import { MCPClient } from './client.js';
-import { MCPServerConfig, MCPServerError } from '@/types';
+import { MCPClient } from './client';
+import { MCPServerConfig, MCPServerError } from '../types';
+import fetch from 'node-fetch';
 
 export interface MCPManagerOptions {
   enabledServers?: string[];
@@ -32,8 +33,9 @@ export class MCPManager {
       enabled: true
     });
 
-    // For fetch and git, we'll use node-fetch and isomorphic-git directly
-    // since dedicated MCP servers might not be available
+    // Note: Fetch functionality will be implemented directly using node-fetch
+    // since the official @modelcontextprotocol/server-fetch is not published as a separate package
+    // Git functionality will use isomorphic-git directly for better reliability
   }
 
   async initialize(): Promise<void> {
@@ -197,10 +199,36 @@ export class MCPManager {
     }
   }
 
+  // Fetch functionality (direct implementation since MCP fetch server isn't published)
+  async fetchUrl(url: string, options: { method?: string; headers?: Record<string, string>; body?: string } = {}): Promise<{ content: string; contentType?: string; status: number }> {
+    try {
+      const response = await fetch(url, {
+        method: options.method || 'GET',
+        headers: options.headers,
+        body: options.body
+      });
+
+      const content = await response.text();
+      const contentType = response.headers.get('content-type') || undefined;
+
+      return {
+        content,
+        contentType,
+        status: response.status
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      throw new MCPServerError(`Failed to fetch URL: ${message}`, {
+        url,
+        error: message
+      });
+    }
+  }
+
   // Utility methods
   async testConnections(): Promise<Record<string, boolean>> {
     const results: Record<string, boolean> = {};
-    
+
     for (const [name, client] of this.clients) {
       try {
         await client.listTools();

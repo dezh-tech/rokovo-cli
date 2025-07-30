@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { KhodkarCLI } from './cli/commands.js';
+import { KhodkarCLI } from "./cli/commands";
+
 
 async function main(): Promise<void> {
   const cli = new KhodkarCLI();

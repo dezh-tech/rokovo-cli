@@ -7,7 +7,7 @@ import {
   FileAnalysis, 
   DEFAULT_IGNORE_PATTERNS,
   FileSystemError 
-} from '@/types';
+} from '../types';
 
 export interface ScanOptions {
   directory: string;

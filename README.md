@@ -20,7 +20,7 @@ Khodkar CLI is a simple, focused tool that scans code and outputs business rules
 ### Prerequisites
 
 - Node.js 18.0.0 or higher
-- An OpenAI API key or Anthropic API key
+- Access to an LLM API (OpenAI, Anthropic, or any OpenAI-compatible provider)
 
 ### Install from npm (when published)
 
@@ -40,22 +40,24 @@ npm link
 
 ## Configuration
 
-Set your API key as an environment variable:
+The CLI now accepts LLM configuration directly as command-line parameters, supporting any OpenAI-compatible LLM provider:
 
-```bash
-# For OpenAI
-export OPENAI_API_KEY="your-api-key-here"
-
-# Or for Anthropic
-export ANTHROPIC_API_KEY="your-api-key-here"
-```
+- **OpenAI**: `--llm-base-url https://api.openai.com/v1 --llm-model gpt-4`
+- **Anthropic**: `--llm-base-url https://api.anthropic.com --llm-model claude-3-sonnet-20240229`
+- **OpenRouter**: `--llm-base-url https://openrouter.ai/api/v1 --llm-model openai/gpt-4`
+- **Local/Custom**: `--llm-base-url http://localhost:8000/v1 --llm-model your-model`
 
 ## Usage
 
 ### Basic Analysis
 
 ```bash
-khodkar analyze --directory ./my-project --output ./business-rules.md
+khodkar analyze \
+  --directory ./my-project \
+  --output ./business-rules.md \
+  --llm-base-url https://api.openai.com/v1 \
+  --llm-api-key your-api-key-here \
+  --llm-model gpt-4
 ```
 
 ### Advanced Options
@@ -65,7 +67,52 @@ khodkar analyze \
   --directory ./my-project \
   --output ./rules.json \
   --format json \
-  --verbose
+  --verbose \
+  --llm-base-url https://api.anthropic.com \
+  --llm-api-key your-anthropic-key \
+  --llm-model claude-3-sonnet-20240229
+```
+
+### Using Different LLM Providers
+
+#### OpenAI
+```bash
+khodkar analyze \
+  --directory ./my-project \
+  --output ./rules.md \
+  --llm-base-url https://api.openai.com/v1 \
+  --llm-api-key sk-your-openai-key \
+  --llm-model gpt-4
+```
+
+#### Anthropic
+```bash
+khodkar analyze \
+  --directory ./my-project \
+  --output ./rules.md \
+  --llm-base-url https://api.anthropic.com \
+  --llm-api-key your-anthropic-key \
+  --llm-model claude-3-sonnet-20240229
+```
+
+#### OpenRouter (Multiple Models)
+```bash
+khodkar analyze \
+  --directory ./my-project \
+  --output ./rules.md \
+  --llm-base-url https://openrouter.ai/api/v1 \
+  --llm-api-key sk-or-your-openrouter-key \
+  --llm-model openai/gpt-4
+```
+
+#### Local/Self-hosted
+```bash
+khodkar analyze \
+  --directory ./my-project \
+  --output ./rules.md \
+  --llm-base-url http://localhost:8000/v1 \
+  --llm-api-key your-local-key \
+  --llm-model your-model-name
 ```
 
 ### Validate Environment
@@ -83,12 +130,22 @@ Analyze a codebase and extract business rules.
 **Options:**
 - `-d, --directory <path>` - Target codebase directory to analyze (required)
 - `-o, --output <path>` - Output file path for extracted business rules (required)
+- `--llm-base-url <url>` - LLM API base URL (required)
+- `--llm-api-key <key>` - LLM API key for authentication (required)
+- `--llm-model <model>` - LLM model name/identifier (required)
 - `-f, --format <format>` - Output format: `json` or `markdown` (default: `markdown`)
 - `-v, --verbose` - Enable detailed progress logging
 
 **Example:**
 ```bash
-khodkar analyze -d ./src -o ./business-rules.md -f markdown -v
+khodkar analyze \
+  -d ./src \
+  -o ./business-rules.md \
+  --llm-base-url https://api.openai.com/v1 \
+  --llm-api-key your-api-key-here \
+  --llm-model gpt-4 \
+  -f markdown \
+  -v
 ```
 
 ### `validate`
@@ -175,14 +232,9 @@ The tool automatically categorizes extracted rules into:
 
 - User Management
 - Authentication
-- Authorization
-- Payment Processing
-- Data Validation
 - Business Logic
-- API Constraints
 - Security Rules
 - Workflow Rules
-- Integration Rules
 
 ## Development
 
@@ -232,11 +284,14 @@ src/
 
 ### Common Issues
 
-1. **API Key Not Found**
+1. **LLM Configuration Error**
    ```
-   Error: LLM API Key: Missing
+   Error: LLM Configuration Error: Invalid base URL format
    ```
-   Solution: Set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` environment variable.
+   Solution: Ensure you provide valid LLM configuration parameters:
+   - `--llm-base-url`: Valid URL (e.g., https://api.openai.com/v1)
+   - `--llm-api-key`: Your API key for the chosen provider
+   - `--llm-model`: Valid model name for your provider
 
 2. **MCP Server Connection Failed**
    ```

@@ -1,30 +1,34 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import * as path from 'path';
-import { 
-  CLIOptions, 
-  CLIOptionsSchema, 
+import {
+  CLIOptions,
+  CLIOptionsSchema,
   AnalysisResult,
   LLMAnalysisRequest,
   FileSystemError,
   LLMAnalysisError,
-  MCPServerError 
-} from '@/types';
-import { FileScanner } from '@/utils/file-scanner.js';
-import { OutputFormatter } from '@/utils/output-formatter.js';
-import { LLMProcessor } from '@/analysis/llm-processor.js';
-import { MCPManager } from '@/mcp/manager.js';
-import { ProgressTracker } from '@/utils/progress-tracker.js';
+  MCPServerError,
+  LLMConfig,
+  LLMConfigSchema
+} from '../types';
+import { FileScanner } from '../utils/file-scanner';
+import { OutputFormatter } from '../utils/output-formatter';
+import { LLMProcessor } from '../analysis/llm-processor';
+import { MCPManager } from '../mcp/manager';
+import { ProgressTracker } from '../utils/progress-tracker';
 
 export class KhodkarCLI {
   private program: Command;
   private mcpManager: MCPManager;
-  private llmProcessor: LLMProcessor;
 
   constructor() {
     this.program = new Command();
-    this.mcpManager = new MCPManager();
-    this.llmProcessor = new LLMProcessor();
+    this.mcpManager = new MCPManager({
+      serverTimeout: 10000, // 10 seconds
+      maxRetries: 3,
+      enabledServers: ['filesystem', 'memory']
+    });
     this.setupCommands();
   }
 
@@ -39,6 +43,9 @@ export class KhodkarCLI {
       .description('Analyze a codebase and extract business rules')
       .requiredOption('-d, --directory <path>', 'Target codebase directory to analyze')
       .requiredOption('-o, --output <path>', 'Output file path for extracted business rules')
+      .requiredOption('--llm-base-url <url>', 'LLM API base URL (e.g., https://api.openai.com/v1, https://api.anthropic.com)')
+      .requiredOption('--llm-api-key <key>', 'LLM API key for authentication')
+      .requiredOption('--llm-model <model>', 'LLM model name (e.g., gpt-4, claude-3-sonnet-20240229)')
       .option('-f, --format <format>', 'Output format (json|markdown)', 'markdown')
       .option('-v, --verbose', 'Enable detailed progress logging', false)
       .action(async (options) => {
@@ -66,6 +73,27 @@ export class KhodkarCLI {
   private async handleAnalyzeCommand(rawOptions: unknown): Promise<void> {
     // Validate and parse options
     const options = this.validateOptions(rawOptions);
+
+    // Create and validate LLM configuration from CLI options
+    const llmConfig: LLMConfig = {
+      baseUrl: options.llmBaseUrl,
+      apiKey: options.llmApiKey,
+      model: options.llmModel,
+      temperature: 0.1, // Default for consistent analysis
+      maxTokens: 4000,
+      timeout: 30000,
+    };
+
+    // Validate LLM configuration
+    try {
+      LLMConfigSchema.parse(llmConfig);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Invalid LLM configuration';
+      throw new Error(`LLM Configuration Error: ${message}`);
+    }
+
+    // Initialize LLM processor with user configuration
+    const llmProcessor = new LLMProcessor(llmConfig);
 
     const progressTracker = new ProgressTracker({
       verbose: options.verbose,
@@ -135,7 +163,7 @@ export class KhodkarCLI {
         }
       }
 
-      const businessRules = await this.llmProcessor.batchAnalyze(analysisRequests);
+      const businessRules = await llmProcessor.batchAnalyze(analysisRequests);
 
       if (options.verbose) {
         console.log(chalk.green(`✓ Extracted ${businessRules.length} business rules`));
@@ -189,20 +217,15 @@ export class KhodkarCLI {
   private async handleValidateCommand(): Promise<void> {
     console.log(chalk.blue('🔍 Validating environment and dependencies...\n'));
 
-    // Check API keys
-    const hasApiKey = LLMProcessor.validateApiKey();
-    console.log(`${hasApiKey ? '✅' : '❌'} LLM API Key: ${hasApiKey ? 'Found' : 'Missing'}`);
-    
-    if (!hasApiKey) {
-      console.log(chalk.yellow('  Required: OPENAI_API_KEY or ANTHROPIC_API_KEY'));
-    }
+    console.log(chalk.yellow('ℹ  LLM configuration is now provided via CLI parameters:'));
+    console.log(chalk.yellow('   --llm-base-url, --llm-api-key, --llm-model'));
 
     // Test MCP servers
     console.log('\n' + chalk.bold('MCP Servers:'));
     try {
       await this.mcpManager.initialize();
       const status = this.mcpManager.getServerStatus();
-      
+
       for (const [name, info] of Object.entries(status)) {
         console.log(`${info.connected ? '✅' : '❌'} ${name}: ${info.connected ? 'Connected' : 'Failed'}`);
       }

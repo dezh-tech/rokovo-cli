@@ -6,9 +6,24 @@ export const CLIOptionsSchema = z.object({
   output: z.string().min(1, 'Output path is required'),
   format: z.enum(['json', 'markdown']).default('markdown'),
   verbose: z.boolean().default(false),
+  llmBaseUrl: z.string().min(1, 'LLM base URL is required'),
+  llmApiKey: z.string().min(1, 'LLM API key is required'),
+  llmModel: z.string().min(1, 'LLM model name is required'),
 });
 
 export type CLIOptions = z.infer<typeof CLIOptionsSchema>;
+
+// LLM Configuration Schema
+export const LLMConfigSchema = z.object({
+  baseUrl: z.string().min(1, 'Base URL is required'),
+  apiKey: z.string().min(1, 'API key is required'),
+  model: z.string().min(1, 'Model name is required'),
+  temperature: z.number().min(0).max(2).default(0.1),
+  maxTokens: z.number().min(1).default(4000),
+  timeout: z.number().min(1000).default(30000),
+});
+
+export type LLMConfig = z.infer<typeof LLMConfigSchema>;
 
 // File Types for Analysis
 export const SupportedFileExtensions = [
@@ -167,14 +182,9 @@ export const DEFAULT_IGNORE_PATTERNS = [
 export const BUSINESS_RULE_CATEGORIES = [
   'User Management',
   'Authentication',
-  'Authorization',
-  'Payment Processing',
-  'Data Validation',
   'Business Logic',
-  'API Constraints',
   'Security Rules',
   'Workflow Rules',
-  'Integration Rules',
 ] as const;
 
 export type BusinessRuleCategory = typeof BUSINESS_RULE_CATEGORIES[number];
