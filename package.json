@@ -1,6 +1,6 @@
 {
   "name": "khodkar-cli",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A TypeScript CLI application that extracts business rules and logic from codebases for customer support knowledge bases",
   "main": "dist/index.js",
   "bin": {
