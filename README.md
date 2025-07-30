@@ -1,7 +1,9 @@
 # Khodkar CLI
 
 Khodkar CLI is a powerful tool developed by [khodkar.dezh.tech](https://khodkar.dezh.tech) that helps teams extract business flow and logic documentation from their codebase. It's specifically designed to create comprehensive knowledge base documentation that helps support teams understand the business rules embedded in the code.
-
+<p align="center">
+  <img src="assets/logo.png" alt="Khodkar CLI Logo" width="300">
+</p>
 ## Quick Start
 
 ```bash
