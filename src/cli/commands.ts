@@ -10,13 +10,14 @@ import {
   LLMAnalysisError,
   MCPServerError,
   LLMConfig,
-  LLMConfigSchema
+  LLMConfigSchema,
 } from '../types';
 import { FileScanner } from '../utils/file-scanner';
 import { OutputFormatter } from '../utils/output-formatter';
 import { LLMProcessor } from '../analysis/llm-processor';
 import { MCPManager } from '../mcp/manager';
 import { ProgressTracker } from '../utils/progress-tracker';
+import { version } from '../../package.json';
 
 export class KhodkarCLI {
   private program: Command;
@@ -27,7 +28,7 @@ export class KhodkarCLI {
     this.mcpManager = new MCPManager({
       serverTimeout: 10000, // 10 seconds
       maxRetries: 3,
-      enabledServers: ['filesystem', 'memory']
+      enabledServers: ['filesystem', 'memory'],
     });
     this.setupCommands();
   }
@@ -35,20 +36,28 @@ export class KhodkarCLI {
   private setupCommands(): void {
     this.program
       .name('khodkar')
-      .description('Extract business rules and logic from codebases for customer support knowledge bases')
-      .version('1.0.3');
+      .description(
+        'Extract business rules and logic from codebases for customer support knowledge bases'
+      )
+      .version(version);
 
     this.program
       .command('analyze')
       .description('Analyze a codebase and extract business rules')
       .requiredOption('-d, --directory <path>', 'Target codebase directory to analyze')
       .requiredOption('-o, --output <path>', 'Output file path for extracted business rules')
-      .requiredOption('--llm-base-url <url>', 'LLM API base URL (e.g., https://api.openai.com/v1, https://api.anthropic.com)')
+      .requiredOption(
+        '--llm-base-url <url>',
+        'LLM API base URL (e.g., https://api.openai.com/v1, https://api.anthropic.com)'
+      )
       .requiredOption('--llm-api-key <key>', 'LLM API key for authentication')
-      .requiredOption('--llm-model <model>', 'LLM model name (e.g., gpt-4, claude-3-sonnet-20240229)')
+      .requiredOption(
+        '--llm-model <model>',
+        'LLM model name (e.g., gpt-4, claude-3-sonnet-20240229)'
+      )
       .option('-f, --format <format>', 'Output format (json|markdown)', 'markdown')
       .option('-v, --verbose', 'Enable detailed progress logging', false)
-      .action(async (options) => {
+      .action(async options => {
         await this.handleAnalyzeCommand(options);
       });
 
@@ -97,7 +106,7 @@ export class KhodkarCLI {
 
     const progressTracker = new ProgressTracker({
       verbose: options.verbose,
-      showETA: true
+      showETA: true,
     });
 
     try {
@@ -152,8 +161,8 @@ export class KhodkarCLI {
             context: {
               projectName: FileScanner.getProjectName(options.directory),
               fileType: fileAnalysis.fileType,
-              relatedFiles: []
-            }
+              relatedFiles: [],
+            },
           });
         } catch (error) {
           if (options.verbose) {
@@ -180,7 +189,7 @@ export class KhodkarCLI {
           totalRules: businessRules.length,
           highPriorityRules: businessRules.filter(rule => rule.priority === 'high').length,
           userFacingRules: businessRules.filter(rule => rule.userFacing).length,
-        }
+        },
       };
 
       // Format and save output
@@ -189,7 +198,7 @@ export class KhodkarCLI {
         includeMetadata: true,
         includeSourceReferences: true,
         groupByCategory: true,
-        sortByPriority: true
+        sortByPriority: true,
       });
 
       await formatter.formatAndSave(analysisResult, options.output, options.format);
@@ -197,7 +206,7 @@ export class KhodkarCLI {
       progressTracker.succeed('Analysis complete!');
       console.log(chalk.green('✅ Analysis complete!'));
       console.log(chalk.blue(`📄 Output saved to: ${options.output}`));
-      
+
       // Print summary
       console.log('\n' + chalk.bold('Summary:'));
       console.log(`  • Files analyzed: ${analysisResult.totalFilesAnalyzed}`);
@@ -205,7 +214,6 @@ export class KhodkarCLI {
       console.log(`  • High priority rules: ${analysisResult.summary.highPriorityRules}`);
       console.log(`  • User-facing rules: ${analysisResult.summary.userFacingRules}`);
       console.log(`  • Categories: ${analysisResult.categories.join(', ')}`);
-
     } catch (error) {
       progressTracker.fail('Analysis failed');
       await this.handleError(error);
@@ -227,7 +235,9 @@ export class KhodkarCLI {
       const status = this.mcpManager.getServerStatus();
 
       for (const [name, info] of Object.entries(status)) {
-        console.log(`${info.connected ? '✅' : '❌'} ${name}: ${info.connected ? 'Connected' : 'Failed'}`);
+        console.log(
+          `${info.connected ? '✅' : '❌'} ${name}: ${info.connected ? 'Connected' : 'Failed'}`
+        );
       }
     } catch (error) {
       console.log(chalk.red('❌ Failed to initialize MCP servers'));
