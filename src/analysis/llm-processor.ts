@@ -119,9 +119,9 @@ export class LLMProcessor {
 
 CRITICAL REQUIREMENT: Write ALL business rules in plain English that a non-technical customer support representative can understand. Avoid ALL technical terminology, function names, variable names, class names, or code-specific references.
 
-TASK: Analyze the following ${request.language} code and extract business rules that customer support teams need to know to help customers effectively.
+Analyze the ${request.language} code and extract business rules that customer support teams need to know to help customers effectively.
 
-ANALYSIS DEPTH: Look beyond surface-level code to understand:
+Analyze Rules: Look beyond surface-level code to understand:
 - Business logic and decision-making processes
 - User interaction patterns and workflows
 - Data validation and business constraints
@@ -129,7 +129,7 @@ ANALYSIS DEPTH: Look beyond surface-level code to understand:
 - Security and access control implications
 - Integration points and external dependencies
 
-TRANSLATION GUIDELINES:
+Code to user-friendly language examples:
 - Instead of "validateUserCredentials() function" → "User passwords must meet security requirements"
 - Instead of "API rate limiting" → "Users can only make a certain number of requests per hour"
 - Instead of "database constraint" → "System requirement" or "Business rule"
@@ -138,7 +138,7 @@ TRANSLATION GUIDELINES:
 - Instead of "enum values" → "Available options are..."
 - Instead of "boolean flag" → "Setting that can be turned on or off"
 
-FOCUS ON EXTRACTING:
+Focus on:
 - What users can and cannot do in the system
 - Limits and restrictions that affect user experience
 - Required information users must provide
@@ -148,32 +148,32 @@ FOCUS ON EXTRACTING:
 - Business processes and workflows users experience
 - Account and access requirements
 
-AVAILABLE CATEGORIES: ${categories}
+Available categories: ${categories}
 - User Management: Rules about user accounts, profiles, roles, and permissions
 - Authentication: Rules about logging in, passwords, and account security
 - Business Logic: Core business processes, calculations, and operational rules
 - Security Rules: Safety measures and restrictions to protect users and data
 - Workflow Rules: Step-by-step processes users must follow
 
-FILE CONTEXT:
+File content:
 - File: ${request.filePath}
 - Language: ${request.language}
 - Project: ${request.context.projectName || 'Unknown'}
 
-CODE TO ANALYZE:
+Code to analyze:
 \`\`\`${request.language.toLowerCase()}
 ${request.fileContent}
 \`\`\`
 
-WRITING REQUIREMENTS:
+Writing Rules:
 1. Write each rule as if explaining to a customer support representative who has never seen code
-2. Use everyday business language - avoid ALL technical terms
-3. Focus on the "what" and "why" from a user's perspective, not the "how" from a technical perspective
-4. Explain the business impact or user experience, not the implementation
-5. Use active voice and clear, simple sentences
-6. If you must reference a technical concept, translate it to business terms
+2. Focus on the "what" and "why" from a user's perspective, not the "how" from a technical perspective
+3. Explain the business impact or user experience, not the implementation
+4. Use active voice and clear, simple sentences
+5. If you must reference a technical concept, translate it to business terms
 
-EXAMPLE TRANSFORMATIONS:
+Example transformations:
+
 ❌ "The validateEmail() method checks if the email format matches the regex pattern"
 ✅ "User email addresses must be in the correct format (like user@company.com) before account creation is allowed"
 
@@ -200,7 +200,7 @@ CONTEXT ANALYSIS TIPS:
 - Analyze data transformations → These show how user input is processed
 - Study configuration values → These often represent business constraints
 
-RESPONSE FORMAT:
+Response format FORMAT:
 Return a JSON object with:
 - rules: Array of business rules written in customer support friendly language
 - summary: Object with totalRules, categories used, and confidence score (0.0-1.0)
@@ -215,8 +215,7 @@ Each rule should have:
 - tags: Array of business-relevant tags (no technical terms, focus on user actions/features)
 - userFacing: Boolean indicating if rule directly affects customer experience
 
-QUALITY GUIDELINES:
-- Extract 3-10 meaningful business rules per file
+Quality Guidelines:
 - Focus on rules that help customer support understand what customers can do, what they cannot do, and why
 - Prioritize rules that customers are likely to encounter or ask about
 - Ensure each rule provides actionable information for customer support
@@ -296,6 +295,4 @@ Generate a 2-3 paragraph summary that helps customer support understand the key 
 
     return result;
   }
-
-
 }
