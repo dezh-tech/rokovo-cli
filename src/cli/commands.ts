@@ -15,6 +15,7 @@ import { LLMProcessor } from '../analysis/llm-processor';
 import { ProgressTracker } from '../utils/progress-tracker';
 import { version } from '../../package.json';
 import { McpManager } from '../mcp/manager';
+import { writeFile, writeFileSync } from 'fs';
 
 export class KhodkarCLI {
   private program: Command;
@@ -59,7 +60,7 @@ export class KhodkarCLI {
 
   async run(argv: string[]): Promise<void> {
     // try {
-      await this.program.parseAsync(argv);
+    await this.program.parseAsync(argv);
     // } catch (error) {
     //   const message = error instanceof Error ? error.message : 'Unknown error';
     //   console.error(chalk.red(`Error: ${message}`));
@@ -96,33 +97,33 @@ export class KhodkarCLI {
     });
 
     // try {
-      progressTracker.start('Initializing analysis...');
+    progressTracker.start('Initializing analysis...');
 
-      if (options.verbose) {
-        console.log(chalk.blue('🔍 Starting business rules analysis...'));
-        console.log(chalk.gray(`Directory: ${options.directory}`));
-        console.log(chalk.gray(`Output: ${options.output}`));
-        console.log(chalk.gray(`Format: ${options.format}`));
-      }
+    if (options.verbose) {
+      console.log(chalk.blue('🔍 Starting business rules analysis...'));
+      console.log(chalk.gray(`Directory: ${options.directory}`));
+      console.log(chalk.gray(`Output: ${options.output}`));
+      console.log(chalk.gray(`Format: ${options.format}`));
+    }
 
-      // Initialize MCP servers
-      progressTracker.updatePhase('scanning', 'Initializing MCP servers...');
-      await this.mcpManager.initializeServers();
+    // Initialize MCP servers
+    progressTracker.updatePhase('scanning', 'Initializing MCP servers...');
+    await this.mcpManager.initializeServers();
 
-      // Analyze files with LLM
-      progressTracker.updatePhase('analyzing', 'Analyzing codebase with LLM...');
+    // Analyze files with LLM
+    progressTracker.updatePhase('analyzing', 'Analyzing codebase with LLM...');
 
-      const tools = await this.mcpManager.getTools();
-      const businessRules = await llmProcessor.analyze(tools);
+    const tools = await this.mcpManager.getTools();
+    const businessRules = await llmProcessor.analyze(tools);
+    writeFileSync(options.output, businessRules, { encoding: 'utf-8' });
 
+    progressTracker.succeed('Analysis complete!');
+    console.log(chalk.green('✅ Analysis complete!'));
+    console.log(chalk.blue(`📄 Output saved to: ${options.output}`));
 
-      progressTracker.succeed('Analysis complete!');
-      console.log(chalk.green('✅ Analysis complete!'));
-      console.log(chalk.blue(`📄 Output saved to: ${options.output}`));
-
-      // Cleanup resources
-      await llmProcessor.cleanup();
-      await this.mcpManager.shutdownServers();
+    // Cleanup resources
+    await llmProcessor.cleanup();
+    await this.mcpManager.shutdownServers();
     // } catch (error) {
     //   progressTracker.fail('Analysis failed');
     //   await this.handleError(error);

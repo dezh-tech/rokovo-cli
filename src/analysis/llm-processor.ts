@@ -66,7 +66,7 @@ export class LLMProcessor {
     this.model = this.provider(this.config.model);
   }
 
-  async analyze(toolSet: ToolSet): Promise<void> {
+  async analyze(toolSet: ToolSet): Promise<string> {
     try {
       // Phase 1: Repository Discovery - Identify files containing business logic
       const repositoryDiscoveryResult = await generateText({
@@ -130,6 +130,8 @@ ${ruleExtractionResult.text}
 
 Now synthesize all extracted rules into a coherent customer support guide.`,
         maxSteps: this.config.maxSteps,
+        toolChoice: 'auto',
+        tools: toolSet,
         stopSequences: ['[DOCUMENTATION_SYNTHESIS_COMPLETE]'],
         experimental_telemetry: {
           isEnabled: true,
@@ -148,6 +150,8 @@ Now synthesize all extracted rules into a coherent customer support guide.`,
       } catch (flushError) {
         console.warn('Failed to flush traces to Langfuse:', flushError);
       }
+
+      return documentationSynthesisResult.text;
     } catch (error) {
       if (error instanceof LLMAnalysisError) {
         throw error;
@@ -186,19 +190,42 @@ Now synthesize all extracted rules into a coherent customer support guide.`,
    */
   getRepositoryDiscoveryPrompt() {
     return `
-Your task is to identify all source code files in the repository that likely contain business logic rules such as:
-- Validation rules and constraints
-- Enum definitions and constants
-- API rate limits and quotas
-- Authorization and permission rules
-- Business workflow constraints
-- Data validation schemas
-- Configuration limits
+You are a customer support documentation specialist identifying files that contain user-facing business rules and workflows.
 
-Use the list_directory, list_allowed_directories and search_files tool to explore the repository structure, then use minimal read_text_file calls only to confirm file relevance.
-Do NOT analyze the actual code content yet.
+DISCOVERY STRATEGY:
+1. Use list_directory and search_files to explore the repository systematically
+2. Focus on files that contain customer-impacting business logic
+3. Prioritize files with user workflows, validation rules, and business constraints
+4. Use minimal read_text_file calls only to verify customer relevance
 
-When complete, output a numbered list of file paths that contain business logic rules and end with "[REPOSITORY_DISCOVERY_COMPLETE]"`;
+TARGET FILES - Look for files containing:
+- User authentication and authorization flows
+- Input validation and business rule enforcement  
+- API endpoints that customers interact with
+- Payment processing and billing logic
+- User account management and permissions
+- Data processing workflows that affect users
+- Error handling and user feedback mechanisms
+- Feature flags and business configuration
+- Workflow orchestration and state management
+
+CUSTOMER SUPPORT RELEVANCE - Prioritize files that help answer:
+- "Why can't a user do X?"
+- "What are the limits/restrictions for Y?"
+- "How does feature Z work?"
+- "What happens when a user does A?"
+- "Why did the system behave this way?"
+
+SELECTION CRITERIA:
+- Choose 10-15 files maximum that are most relevant to customer support
+- Focus on files with business logic that customers directly experience
+- Avoid internal tooling, build scripts, or pure technical infrastructure
+- Prioritize recently modified files in core user-facing modules
+
+OUTPUT: List each selected file with its customer support relevance:
+1. path/to/file.ext - How this file helps answer customer questions
+
+End with "[REPOSITORY_DISCOVERY_COMPLETE]"`;
   }
 
   /**
@@ -207,36 +234,55 @@ When complete, output a numbered list of file paths that contain business logic 
    */
   getRuleExtractionPrompt() {
     return `
-You are an expert analyst. Your task is to read a codebase and produce a Markdown support guide that explains its business rules in simple, user‑facing language.
+You are a customer support documentation expert creating a comprehensive knowledge base from code analysis.
 
-Based on the files identified in the repository discovery phase, your task is to:
+OBJECTIVE: Extract business rules and workflows that customer support agents need to understand user issues and system behavior.
 
-1. Use Memory tools: create_entities, create_relations, add_observations, delete_entities, delete_observations, delete_relations, read_graph, search_nodes, open_nodes to store the rules, query them and make relation to provide better output
-3. Extract all business rule statements from the code
-4. Format each rule in Markdown with:
-   - A clear heading (e.g., "Payment Processing Limits", "User Account Validation")
-   - A brief description explaining what the rule does and why it matters for customer support
-   - A practical example when relevant (e.g., "If payment exceeds €10,000, the system requires additional verification")
+ANALYSIS APPROACH:
+1. Read each identified file using read_text_file
+2. Extract rules that directly impact customer experience
+3. Focus on user-facing behaviors, limitations, and workflows
+4. Document in a format that helps support agents answer customer questions
 
-Guidelines:
-- Write in active voice using simple, non-technical language
-- Focus on user-facing behavior and customer impact
-- Avoid implementation details, code snippets, or internal technical jargon
-- Organize rules by functional area when possible
+FOR EACH BUSINESS RULE/WORKFLOW, CREATE A SUPPORT-FRIENDLY ENTRY:
 
-Examples:
+**Rule Title**: Clear, searchable name (e.g., "Email Validation Requirements", "Payment Processing Limits")
 
-**Bad:** “The validateEmail() method checks regex '^[^@]+@…'”  
-**Good:** “User emails must match proper format (like user@example.com) before account creation is allowed.”
+**What It Does**: Plain English explanation of the rule's purpose and behavior
 
-**Bad:** “user.role==='admin' gives access”  
-**Good:** “Only administrators can access advanced features.”
+**Customer Impact**: How this affects users and what they experience
 
-**Bad:** “Payment.amount > maxLimit throws ValidationError”  
-**Good:** “Payments cannot exceed the maximum allowed for the user's account level.”
+**Common Questions**: Typical customer questions this rule addresses
 
-When complete process each file systematically, output a list of business logic rules"`;
+**Troubleshooting**: How to help customers when this rule causes issues
 
+**Examples**: 
+- ✅ What works: Concrete examples of valid scenarios
+- ❌ What fails: Common failure cases and error messages
+
+**Edge Cases**: Special situations or exceptions support should know about
+
+**Related Features**: How this connects to other system behaviors
+
+WRITING GUIDELINES:
+- Use simple, non-technical language
+- Focus on customer-facing behaviors, not implementation details
+- Include specific error messages customers might see
+- Provide actionable guidance for support agents
+- Use bullet points and clear structure for easy scanning
+- Make each entry searchable with relevant keywords
+
+ORGANIZATION:
+Group related rules under clear categories:
+- User Account Management
+- Authentication & Security
+- Data Validation & Input Rules
+- Payment & Billing Logic
+- Feature Access & Permissions
+- Workflow & Process Rules
+- Error Handling & Recovery
+
+End with "[RULE_EXTRACTION_COMPLETE]"`;
   }
 
   /**
@@ -245,20 +291,77 @@ When complete process each file systematically, output a list of business logic 
    */
   getDocumentationSynthesisPrompt() {
     return `
-You are a technical documentation specialist creating customer support materials.
+You are creating the definitive customer support knowledge base document. This will be used by support agents to quickly find answers to customer questions.
 
-Your task is to synthesize all the business rules extracted from the previous phase into one comprehensive, well-organized customer support guide in a way that our support agent can use to answer user questions.
+DOCUMENT STRUCTURE:
 
-Requirements:
-- Organize rules into logical categories (User Management, Authentication, Business Logic, Security Rules, Workflow Rules)
-- Ensure each rule has a clear heading, description, and example where applicable
-- Write for customer support agents who need to quickly understand system behavior
-- Use active voice and simple language throughout
-- Remove any duplicate or overlapping rules
-- Create a logical flow that makes sense for support scenarios
+# Customer Support Knowledge Base
 
-The final output should be a complete Markdown document that serves as a practical reference guide for customer support teams without inclusion of emojis.
+## Quick Reference Guide
+Create a searchable index of common customer issues with direct links to relevant sections.
 
-Conclude with "[DOCUMENTATION_SYNTHESIS_COMPLETE]"`;
+## User Account Management
+Rules about account creation, profile updates, permissions, etc.
+
+## Authentication & Security  
+Login requirements, password rules, security restrictions, etc.
+
+## Data Validation & Input Rules
+What data is accepted/rejected, format requirements, validation errors, etc.
+
+## Payment & Billing Logic
+Payment processing rules, billing cycles, refund policies, etc.
+
+## Feature Access & Permissions
+Who can access what, feature limitations, upgrade requirements, etc.
+
+## Workflow & Process Rules
+Step-by-step processes, state transitions, approval workflows, etc.
+
+## Error Handling & Recovery
+Common errors, what they mean, how to resolve them, etc.
+
+## Troubleshooting Quick Fixes
+Fast solutions for frequent customer issues.
+
+FORMATTING REQUIREMENTS:
+
+For each rule entry, use this exact format:
+
+### [Rule Name]
+
+**What it does:** Brief explanation in plain English
+
+**Customer impact:** How users experience this rule
+
+**Common questions:**
+- "Why can't I...?"
+- "What does this error mean?"
+- "How do I...?"
+
+**Troubleshooting steps:**
+1. First thing to check
+2. Next step if that doesn't work
+3. When to escalate
+
+**Examples:**
+- ✅ **Works:** Specific valid example
+- ❌ **Fails:** Common failure with exact error message
+
+**Keywords:** searchable terms, error codes, feature names
+
+---
+
+WRITING STYLE:
+- Use active voice and present tense
+- Include exact error messages in quotes
+- Provide step-by-step instructions
+- Use consistent formatting throughout
+- Make it scannable with clear headings
+- Include relevant keywords for searchability
+
+FINAL OUTPUT: A complete, well-organized Markdown document that serves as a comprehensive customer support reference guide.
+
+End with "[DOCUMENTATION_SYNTHESIS_COMPLETE]"`;
   }
 }

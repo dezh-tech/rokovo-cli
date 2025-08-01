@@ -18,17 +18,17 @@ export class McpManager {
     });
     this.mcpClients.set('filesystem', fsMcpClient);
 
-    const memoryMcpServer = new StdioClientTransport({
-      command: 'npx',
-      args: ['-y', '@modelcontextprotocol/server-memory'],
-    });
-    const memoryMcpClient = await experimental_createMCPClient({
-      transport: memoryMcpServer,
-      onUncaughtError(error) {
-        console.error('Uncaught error in memory MCP server:', error);
-      },
-    });
-    this.mcpClients.set('memory', memoryMcpClient);
+    // const memoryMcpServer = new StdioClientTransport({
+    //   command: 'npx',
+    //   args: ['-y', '@modelcontextprotocol/server-memory'],
+    // });
+    // const memoryMcpClient = await experimental_createMCPClient({
+    //   transport: memoryMcpServer,
+    //   onUncaughtError(error) {
+    //     console.error('Uncaught error in memory MCP server:', error);
+    //   },
+    // });
+    // this.mcpClients.set('memory', memoryMcpClient);
 
     // const thinkingMcpServer = new StdioClientTransport({
     //   command: 'npx',
