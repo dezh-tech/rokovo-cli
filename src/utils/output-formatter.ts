@@ -1,11 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { 
-  AnalysisResult, 
-  BusinessRule, 
-  Output, 
-  FileSystemError 
-} from '../types';
+import { AnalysisResult, BusinessRule, Output, FileSystemError } from '../types';
 
 export interface FormatterOptions {
   includeMetadata?: boolean;
@@ -21,18 +16,16 @@ export class OutputFormatter {
       includeSourceReferences: true,
       groupByCategory: true,
       sortByPriority: true,
-      ...options
+      ...options,
     };
   }
 
   async formatAndSave(
-    result: AnalysisResult, 
-    outputPath: string, 
+    result: AnalysisResult,
+    outputPath: string,
     format: 'json' | 'markdown'
   ): Promise<void> {
-    const output = format === 'json' 
-      ? this.formatAsJSON(result)
-      : this.formatAsMarkdown(result);
+    const output = format === 'json' ? this.formatAsJSON(result) : this.formatAsMarkdown(result);
 
     try {
       // Ensure output directory exists
@@ -41,13 +34,12 @@ export class OutputFormatter {
 
       // Write the formatted output
       await fs.writeFile(outputPath, output.content, 'utf-8');
-      
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       throw new FileSystemError(`Failed to save output: ${message}`, {
         outputPath,
         format,
-        error: message
+        error: message,
       });
     }
   }
@@ -55,7 +47,7 @@ export class OutputFormatter {
   formatAsJSON(result: AnalysisResult): Output {
     return {
       format: 'json',
-      content: JSON.stringify(result, null, 2)
+      content: JSON.stringify(result, null, 2),
     };
   }
 
@@ -63,7 +55,7 @@ export class OutputFormatter {
     const lines: string[] = [];
 
     // Header
-    lines.push(`# Business Rules for ${result.applicationName}`);
+    lines.push(`# Business Rules`);
     lines.push('');
 
     // Metadata section
@@ -71,42 +63,22 @@ export class OutputFormatter {
       lines.push('## Analysis Summary');
       lines.push('');
       lines.push(`- **Analysis Date:** ${new Date(result.analysisDate).toLocaleDateString()}`);
-      lines.push(`- **Total Files Analyzed:** ${result.totalFilesAnalyzed}`);
       lines.push(`- **Total Business Rules:** ${result.summary.totalRules}`);
       lines.push(`- **High Priority Rules:** ${result.summary.highPriorityRules}`);
       lines.push(`- **User-Facing Rules:** ${result.summary.userFacingRules}`);
       lines.push('');
     }
 
-    // Rules organized by category
-    if (this.options.groupByCategory) {
-      const categorizedRules = this.categorizeRules(result.businessRules);
-      
-      for (const [category, rules] of Object.entries(categorizedRules)) {
-        lines.push(`## ${category}`);
-        lines.push('');
+    // All rules in one section
+    lines.push('## Business Rules');
+    lines.push('');
 
-        const sortedRules = this.options.sortByPriority 
-          ? this.sortRulesByPriority(rules)
-          : rules;
+    const sortedRules = this.options.sortByPriority
+      ? this.sortRulesByPriority(result.businessRules)
+      : result.businessRules;
 
-        for (const rule of sortedRules) {
-          lines.push(...this.formatRule(rule));
-        }
-        lines.push('');
-      }
-    } else {
-      // All rules in one section
-      lines.push('## Business Rules');
-      lines.push('');
-
-      const sortedRules = this.options.sortByPriority 
-        ? this.sortRulesByPriority(result.businessRules)
-        : result.businessRules;
-
-      for (const rule of sortedRules) {
-        lines.push(...this.formatRule(rule));
-      }
+    for (const rule of sortedRules) {
+      lines.push(...this.formatRule(rule));
     }
 
     // Footer with generation info
@@ -117,7 +89,7 @@ export class OutputFormatter {
 
     return {
       format: 'markdown',
-      content: lines.join('\n')
+      content: lines.join('\n'),
     };
   }
 
@@ -141,9 +113,10 @@ export class OutputFormatter {
 
     // Source reference
     if (this.options.includeSourceReferences && rule.source) {
-      const sourceRef = rule.source.startLine && rule.source.endLine
-        ? `${rule.source.file}:${rule.source.startLine}-${rule.source.endLine}`
-        : rule.source.file;
+      const sourceRef =
+        rule.source.startLine && rule.source.endLine
+          ? `${rule.source.file}:${rule.source.startLine}-${rule.source.endLine}`
+          : rule.source.file;
       lines.push(`*Source: ${sourceRef}*`);
       lines.push('');
     }
@@ -151,22 +124,9 @@ export class OutputFormatter {
     return lines;
   }
 
-  private categorizeRules(rules: BusinessRule[]): Record<string, BusinessRule[]> {
-    const categorized: Record<string, BusinessRule[]> = {};
-
-    for (const rule of rules) {
-      if (!categorized[rule.category]) {
-        categorized[rule.category] = [];
-      }
-      categorized[rule.category].push(rule);
-    }
-
-    return categorized;
-  }
-
   private sortRulesByPriority(rules: BusinessRule[]): BusinessRule[] {
     const priorityOrder = { high: 3, medium: 2, low: 1 };
-    
+
     return [...rules].sort((a, b) => {
       // First sort by priority
       const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
@@ -186,7 +146,7 @@ export class OutputFormatter {
     const emojiMap = {
       high: '🔴',
       medium: '🟡',
-      low: '🟢'
+      low: '🟢',
     };
     return emojiMap[priority];
   }
@@ -204,7 +164,7 @@ export class OutputFormatter {
         const message = error instanceof Error ? error.message : 'Unknown error';
         throw new FileSystemError(`Cannot create output directory: ${message}`, {
           outputPath,
-          error: message
+          error: message,
         });
       }
     }
@@ -214,18 +174,12 @@ export class OutputFormatter {
     return format === 'json' ? '.json' : '.md';
   }
 
-  static generateDefaultOutputPath(
-    directory: string, 
-    format: 'json' | 'markdown'
-  ): string {
+  static generateDefaultOutputPath(directory: string, format: 'json' | 'markdown'): string {
     const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     const projectName = path.basename(directory);
     const extension = OutputFormatter.getOutputExtension(format);
-    
-    return path.join(
-      directory, 
-      `business-rules-${projectName}-${timestamp}${extension}`
-    );
+
+    return path.join(directory, `business-rules-${projectName}-${timestamp}${extension}`);
   }
 
   static async fileExists(filePath: string): Promise<boolean> {
@@ -247,20 +201,20 @@ export class OutputFormatter {
       return {
         size: stats.size,
         created: stats.birthtime,
-        modified: stats.mtime
+        modified: stats.mtime,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       throw new FileSystemError(`Cannot get file stats: ${message}`, {
         filePath,
-        error: message
+        error: message,
       });
     }
   }
 
   // Template methods for custom formatting
   protected formatHeader(result: AnalysisResult): string[] {
-    return [`# Business Rules for ${result.applicationName}`, ''];
+    return [`# Business Rules`, ''];
   }
 
   protected formatFooter(): string[] {
@@ -268,7 +222,7 @@ export class OutputFormatter {
       '---',
       '',
       '*This document was automatically generated by Khodkar CLI.*',
-      `*Generated on: ${new Date().toLocaleString()}*`
+      `*Generated on: ${new Date().toLocaleString()}*`,
     ];
   }
 }

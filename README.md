@@ -18,6 +18,7 @@ khodkar analyze --directory ./my-project --output ./docs.md
 - Generates documentation in Markdown or JSON
 - Uses advanced LLM technology for analysis
 - Real-time progress tracking
+- **Built-in Langfuse OpenTelemetry integration** for LLM observability and tracing
 
 ## Basic Usage
 
@@ -29,6 +30,30 @@ khodkar analyze \
   --llm-api-key your-api-key-here \
   --llm-model gpt-4
 ```
+
+## Langfuse Integration
+
+Khodkar CLI includes built-in Langfuse OpenTelemetry integration for comprehensive LLM observability and tracing. All LLM calls are automatically traced and sent to your Langfuse dashboard.
+
+### Configuration
+
+You can configure Langfuse using environment variables:
+
+```bash
+export LANGFUSE_SECRET_KEY=sk-lf-your-secret-key
+export LANGFUSE_PUBLIC_KEY=pk-lf-your-public-key
+export LANGFUSE_BASEURL=https://cloud.langfuse.com
+```
+
+Or copy `.env.example` to `.env` and fill in your credentials.
+
+### Features
+
+- ✅ Automatic trace collection for all LLM calls
+- ✅ Debug logging for troubleshooting
+- ✅ Proper trace flushing and cleanup
+- ✅ Custom metadata and function IDs
+- ✅ Error tracking and performance monitoring
 
 For detailed documentation including advanced usage, configuration options, and troubleshooting, please refer to our [detailed documentation](./DOCUMENTATION.md).
 

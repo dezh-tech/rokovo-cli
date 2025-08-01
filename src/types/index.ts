@@ -9,6 +9,7 @@ export const CLIOptionsSchema = z.object({
   llmBaseUrl: z.string().min(1, 'LLM base URL is required'),
   llmApiKey: z.string().min(1, 'LLM API key is required'),
   llmModel: z.string().min(1, 'LLM model name is required'),
+  llmMaxSteps: z.number().min(1).max(500).optional(),
 });
 
 export type CLIOptions = z.infer<typeof CLIOptionsSchema>;
@@ -18,29 +19,16 @@ export const LLMConfigSchema = z.object({
   baseUrl: z.string().min(1, 'Base URL is required'),
   apiKey: z.string().min(1, 'API key is required'),
   model: z.string().min(1, 'Model name is required'),
-  temperature: z.number().min(0).max(2).default(0.1),
-  maxTokens: z.number().min(1).default(4000),
-  timeout: z.number().min(1000).default(30000),
+  maxSteps: z.number().min(1).max(500).default(20),
 });
 
 export type LLMConfig = z.infer<typeof LLMConfigSchema>;
-
-// File Types for Analysis
-export const SupportedFileExtensions = [
-  '.ts', '.tsx', '.js', '.jsx',
-  '.py', '.java', '.cs', '.cpp', '.c',
-  '.go', '.rs', '.rb', '.php',
-  '.swift', '.kt', '.scala', '.clj'
-] as const;
-
-export type SupportedFileExtension = typeof SupportedFileExtensions[number];
 
 // Business Rule Schema
 export const BusinessRuleSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string(),
-  category: z.string(),
   priority: z.enum(['high', 'medium', 'low']).default('medium'),
   source: z.object({
     file: z.string(),
@@ -52,14 +40,18 @@ export const BusinessRuleSchema = z.object({
 });
 
 export type BusinessRule = z.infer<typeof BusinessRuleSchema>;
+``
+export const llmObjectGeneratedSchema = z.object({
+  rules: z.array(BusinessRuleSchema),
+});
+export type LlmObjectGenerated = z.infer<typeof llmObjectGeneratedSchema>;
+
+
 
 // Analysis Result Schema
 export const AnalysisResultSchema = z.object({
-  applicationName: z.string(),
   analysisDate: z.string(),
-  totalFilesAnalyzed: z.number(),
   businessRules: z.array(BusinessRuleSchema),
-  categories: z.array(z.string()),
   summary: z.object({
     totalRules: z.number(),
     highPriorityRules: z.number(),
@@ -165,26 +157,3 @@ export class MCPServerError extends KhodkarError {
     this.name = 'MCPServerError';
   }
 }
-
-// Constants
-export const DEFAULT_IGNORE_PATTERNS = [
-  'node_modules/**',
-  '.git/**',
-  'dist/**',
-  'build/**',
-  'coverage/**',
-  '*.min.js',
-  '*.map',
-  '.env*',
-  '*.log',
-] as const;
-
-export const BUSINESS_RULE_CATEGORIES = [
-  'User Management',
-  'Authentication',
-  'Business Logic',
-  'Security Rules',
-  'Workflow Rules',
-] as const;
-
-export type BusinessRuleCategory = typeof BUSINESS_RULE_CATEGORIES[number];

@@ -4,32 +4,25 @@ import * as path from 'path';
 import {
   CLIOptions,
   CLIOptionsSchema,
-  AnalysisResult,
-  LLMAnalysisRequest,
-  FileSystemError,
   LLMAnalysisError,
   MCPServerError,
   LLMConfig,
   LLMConfigSchema,
+  AnalysisResult,
 } from '../types';
-import { FileScanner } from '../utils/file-scanner';
 import { OutputFormatter } from '../utils/output-formatter';
 import { LLMProcessor } from '../analysis/llm-processor';
-import { MCPManager } from '../mcp/manager';
 import { ProgressTracker } from '../utils/progress-tracker';
 import { version } from '../../package.json';
+import { McpManager } from '../mcp/manager';
 
 export class KhodkarCLI {
   private program: Command;
-  private mcpManager: MCPManager;
+  private mcpManager: McpManager;
 
   constructor() {
     this.program = new Command();
-    this.mcpManager = new MCPManager({
-      serverTimeout: 10000, // 10 seconds
-      maxRetries: 3,
-      enabledServers: ['filesystem', 'memory'],
-    });
+    this.mcpManager = new McpManager();
     this.setupCommands();
   }
 
@@ -57,40 +50,33 @@ export class KhodkarCLI {
       )
       .option('-f, --format <format>', 'Output format (json|markdown)', 'markdown')
       .option('-v, --verbose', 'Enable detailed progress logging', false)
+      .option('--llm-max-tokens <number>', 'Maximum tokens for LLM response (1000-32000)', parseInt)
+      .option('--llm-max-steps <number>', 'Maximum analysis steps for LLM (10-500)', parseInt)
       .action(async options => {
         await this.handleAnalyzeCommand(options);
-      });
-
-    this.program
-      .command('validate')
-      .description('Validate environment and dependencies')
-      .action(async () => {
-        await this.handleValidateCommand();
       });
   }
 
   async run(argv: string[]): Promise<void> {
-    try {
+    // try {
       await this.program.parseAsync(argv);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error(chalk.red(`Error: ${message}`));
-      process.exit(1);
-    }
+    // } catch (error) {
+    //   const message = error instanceof Error ? error.message : 'Unknown error';
+    //   console.error(chalk.red(`Error: ${message}`));
+    //   process.exit(1);
+    // }
   }
 
   private async handleAnalyzeCommand(rawOptions: unknown): Promise<void> {
     // Validate and parse options
     const options = this.validateOptions(rawOptions);
 
-    // Create and validate LLM configuration from CLI options
+    // // Create and validate LLM configuration from CLI options
     const llmConfig: LLMConfig = {
       baseUrl: options.llmBaseUrl,
       apiKey: options.llmApiKey,
       model: options.llmModel,
-      temperature: 0.1, // Default for consistent analysis
-      maxTokens: 4000,
-      timeout: 30000,
+      maxSteps: options.llmMaxSteps || 50,
     };
 
     // Validate LLM configuration
@@ -109,7 +95,7 @@ export class KhodkarCLI {
       showETA: true,
     });
 
-    try {
+    // try {
       progressTracker.start('Initializing analysis...');
 
       if (options.verbose) {
@@ -121,58 +107,13 @@ export class KhodkarCLI {
 
       // Initialize MCP servers
       progressTracker.updatePhase('scanning', 'Initializing MCP servers...');
-      await this.mcpManager.initialize();
-
-      // Validate directory
-      progressTracker.updatePhase('scanning', 'Validating directory...');
-      await FileScanner.validateDirectory(options.directory);
-
-      // Scan files
-      progressTracker.updatePhase('scanning', 'Scanning files...');
-      const scanner = new FileScanner({
-        directory: options.directory,
-        maxFileSize: 1024 * 1024, // 1MB limit
-      });
-
-      const scanResult = await scanner.scan();
-
-      if (options.verbose) {
-        console.log(chalk.green(`✓ Found ${scanResult.totalFiles} files to analyze`));
-        console.log(chalk.gray(`Total size: ${FileScanner.formatFileSize(scanResult.totalSize)}`));
-        if (scanResult.skippedFiles.length > 0) {
-          console.log(chalk.yellow(`⚠ Skipped ${scanResult.skippedFiles.length} files`));
-        }
-      }
+      await this.mcpManager.initializeServers();
 
       // Analyze files with LLM
-      progressTracker.updatePhase('analyzing', 'Analyzing files with LLM...');
-      const analysisRequests: LLMAnalysisRequest[] = [];
+      progressTracker.updatePhase('analyzing', 'Analyzing codebase with LLM...');
 
-      for (const fileAnalysis of scanResult.files) {
-        try {
-          const content = await FileScanner.readFileContent(
-            path.join(options.directory, fileAnalysis.filePath)
-          );
-
-          analysisRequests.push({
-            filePath: fileAnalysis.filePath,
-            fileContent: content,
-            language: fileAnalysis.language,
-            context: {
-              projectName: FileScanner.getProjectName(options.directory),
-              fileType: fileAnalysis.fileType,
-              relatedFiles: [],
-            },
-          });
-        } catch (error) {
-          if (options.verbose) {
-            const message = error instanceof Error ? error.message : 'Unknown error';
-            console.warn(chalk.yellow(`⚠ Failed to read ${fileAnalysis.filePath}: ${message}`));
-          }
-        }
-      }
-
-      const businessRules = await llmProcessor.batchAnalyze(analysisRequests);
+      const tools = await this.mcpManager.getTools();
+      const businessRules = await llmProcessor.analyze(tools);
 
       if (options.verbose) {
         console.log(chalk.green(`✓ Extracted ${businessRules.length} business rules`));
@@ -180,11 +121,8 @@ export class KhodkarCLI {
 
       // Create analysis result
       const analysisResult: AnalysisResult = {
-        applicationName: FileScanner.getProjectName(options.directory),
         analysisDate: new Date().toISOString(),
-        totalFilesAnalyzed: scanResult.totalFiles,
         businessRules,
-        categories: [...new Set(businessRules.map(rule => rule.category))],
         summary: {
           totalRules: businessRules.length,
           highPriorityRules: businessRules.filter(rule => rule.priority === 'high').length,
@@ -209,43 +147,20 @@ export class KhodkarCLI {
 
       // Print summary
       console.log('\n' + chalk.bold('Summary:'));
-      console.log(`  • Files analyzed: ${analysisResult.totalFilesAnalyzed}`);
       console.log(`  • Business rules extracted: ${analysisResult.summary.totalRules}`);
       console.log(`  • High priority rules: ${analysisResult.summary.highPriorityRules}`);
       console.log(`  • User-facing rules: ${analysisResult.summary.userFacingRules}`);
-      console.log(`  • Categories: ${analysisResult.categories.join(', ')}`);
-    } catch (error) {
-      progressTracker.fail('Analysis failed');
-      await this.handleError(error);
-    } finally {
-      await this.mcpManager.shutdown();
-    }
-  }
 
-  private async handleValidateCommand(): Promise<void> {
-    console.log(chalk.blue('🔍 Validating environment and dependencies...\n'));
-
-    console.log(chalk.yellow('ℹ  LLM configuration is now provided via CLI parameters:'));
-    console.log(chalk.yellow('   --llm-base-url, --llm-api-key, --llm-model'));
-
-    // Test MCP servers
-    console.log('\n' + chalk.bold('MCP Servers:'));
-    try {
-      await this.mcpManager.initialize();
-      const status = this.mcpManager.getServerStatus();
-
-      for (const [name, info] of Object.entries(status)) {
-        console.log(
-          `${info.connected ? '✅' : '❌'} ${name}: ${info.connected ? 'Connected' : 'Failed'}`
-        );
-      }
-    } catch (error) {
-      console.log(chalk.red('❌ Failed to initialize MCP servers'));
-    } finally {
-      await this.mcpManager.shutdown();
-    }
-
-    console.log('\n' + chalk.blue('Validation complete.'));
+      // Cleanup resources
+      await llmProcessor.cleanup();
+      await this.mcpManager.shutdownServers();
+    // } catch (error) {
+    //   progressTracker.fail('Analysis failed');
+    //   await this.handleError(error);
+    //   // Cleanup resources even on error
+    //   await llmProcessor.cleanup();
+    //   await this.mcpManager.shutdownServers();
+    // }
   }
 
   private validateOptions(rawOptions: unknown): CLIOptions {
@@ -258,12 +173,7 @@ export class KhodkarCLI {
   }
 
   private async handleError(error: unknown): Promise<void> {
-    if (error instanceof FileSystemError) {
-      console.error(chalk.red(`File system error: ${error.message}`));
-      if (error.details?.path) {
-        console.error(chalk.gray(`Path: ${error.details.path}`));
-      }
-    } else if (error instanceof LLMAnalysisError) {
+    if (error instanceof LLMAnalysisError) {
       console.error(chalk.red(`LLM analysis error: ${error.message}`));
       if (error.details?.filePath) {
         console.error(chalk.gray(`File: ${error.details.filePath}`));
