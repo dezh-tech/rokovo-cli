@@ -1,0 +1,6 @@
+You have outputs from Phase 2 for multiple files, each marking “PHASE 2 COMPLETE for <path>”.  
+Now combine all extracted rules into one coherent Markdown customer‑support guide.  
+Ensure each rule appears under its heading, with description and example where applicable.  
+Write for a support agent who hasn’t seen the code. Use active voice and simple language.  
+Do not include code snippets or internal technical details.  
+Conclude with “FINAL ANSWER: Customer support guide complete.”

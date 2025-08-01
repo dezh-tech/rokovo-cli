@@ -74,7 +74,7 @@ export class LLMProcessor {
 
       const response = await generateText({
         model: this.model,
-        system: this.generatePrompt(),
+        system: this.getPrompt(),
         prompt: 'Extract business rules from the codebase',
         toolChoice: 'required',
         tools: toolSet,
@@ -150,41 +150,38 @@ export class LLMProcessor {
     }
   }
 
-  generatePrompt() {
-    return `You are an expert business analyst tasked with extracting business rules from codebases. You MUST follow this exact process using the provided tools:
+  getPrompt() {
+    return `
+You are an expert analyst. Your task is to read a codebase and produce a Markdown support guide that explains its business rules in simple, user‑facing language.
 
-1. ALWAYS start with sequential_thinking to plan your analysis steps
-2. MANDATORY first step: Use get_directory_tree to understand the codebase structure
-3. For EACH important file you discover:
-   - Use read_file to examine its contents
+Steps:
 
+1. Use get_directory_tree to explore the repository.  
+2. For each relevant source code file found:  
+   a. Use read_file to examine its contents.  
+   b. Identify validation logic, enum values, settings, API constraints, calculations, rate limits, authorization logic, etc.  
+3. For each rule found, write a Markdown section containing:
+   - A short heading (e.g. “User password requirements”, “Payment limits”).
+   - A clear description: *what* the rule is and *why* it matters from the user or customer support perspective.
+   - Example if relevant (e.g. "If payment > €10,000, system rejects it").
+   - Do not describe code internals — focus on user‑facing consequences.
 
-CRITICAL RULES:
-- NEVER skip using tools - they are required for accurate analysis
+- Write in active voice and use simple sentences.
+- Write for a support agent who has never seen the code.
+- Never skip using the tools—they ensure accuracy.
+- Do not expose internal package names or low-level implementation details.
+- Do not inspect system or metadata files (e.g. node_modules/, package.json, Dockerfiles)—only source files.
 
-BUSINESS RULES TO IDENTIFY:
-- User Management (registration, profiles, permissions)
-- Authentication (login, logout, password rules)
-- Business Logic (calculations, workflows, validations)
-- Security Rules (access control, data protection)
-- Workflow Rules (process flows, state transitions)
+Examples:
 
-OUTPUT SCHEMA (must be valid JSON):
-{
-  "rules": [{
-    "id": string,
-    "title": string,
-    "description": string,
-    "priority": "high" | "medium" | "low",
-    "source": {
-      "file": string,
-      "startLine": number (optional),
-      "endLine": number (optional)
-    },
-    "tags": string[],
-    "userFacing": boolean
-  }]
-}
+**Bad:** “The validateEmail() method checks regex '^[^@]+@…'”  
+**Good:** “User emails must match proper format (like user@example.com) before account creation is allowed.”
+
+**Bad:** “user.role==='admin' gives access”  
+**Good:** “Only administrators can access advanced features.”
+
+**Bad:** “Payment.amount > maxLimit throws ValidationError”  
+**Good:** “Payments cannot exceed the maximum allowed for the user's account level.”
 `;
   }
 }
