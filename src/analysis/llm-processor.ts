@@ -181,7 +181,7 @@ Now synthesize all extracted rules into a coherent customer support guide.`,
    */
   getRepositoryDiscoveryPrompt() {
     return `
-You are an expert code analyst specializing in business rule discovery.
+yOU 
 
 Your task is to identify all source code files in the repository that likely contain business logic rules such as:
 - Validation rules and constraints
@@ -192,8 +192,8 @@ Your task is to identify all source code files in the repository that likely con
 - Data validation schemas
 - Configuration limits
 
-Use the get_directory_tree tool to explore the repository structure, then use minimal read_file calls only to confirm file relevance.
-Do NOT analyze the actual code content yet - that will happen in the next phase.
+Use the list_directory, list_allowed_directories and search_files tool to explore the repository structure, then use minimal read_text_file calls only to confirm file relevance.
+Do NOT analyze the actual code content yet.
 
 When complete, output a numbered list of file paths that contain business logic rules and end with "[REPOSITORY_DISCOVERY_COMPLETE]"`;
   }
@@ -204,13 +204,14 @@ When complete, output a numbered list of file paths that contain business logic 
    */
   getRuleExtractionPrompt() {
     return `
-You are an expert business rule analyst.
+You are an expert analyst. Your task is to read a codebase and produce a Markdown support guide that explains its business rules in simple, user‑facing language.
 
 Based on the files identified in the repository discovery phase, your task is to:
 
-1. Read the full contents of each identified file using read_file
-2. Extract all business rule statements from the code
-3. Format each rule in Markdown with:
+1. Use **sequential_thinking**, create_entities, create_relations, add_observations, delete_entities, delete_observations, delete_relations, read_graph, search_nodes, open_nodes to plan your process
+2. Read the full contents of each identified file using read_text_file
+3. Extract all business rule statements from the code
+4. Format each rule in Markdown with:
    - A clear heading (e.g., "Payment Processing Limits", "User Account Validation")
    - A brief description explaining what the rule does and why it matters for customer support
    - A practical example when relevant (e.g., "If payment exceeds €10,000, the system requires additional verification")
@@ -220,6 +221,17 @@ Guidelines:
 - Focus on user-facing behavior and customer impact
 - Avoid implementation details, code snippets, or internal technical jargon
 - Organize rules by functional area when possible
+
+Examples:
+
+**Bad:** “The validateEmail() method checks regex '^[^@]+@…'”  
+**Good:** “User emails must match proper format (like user@example.com) before account creation is allowed.”
+
+**Bad:** “user.role==='admin' gives access”  
+**Good:** “Only administrators can access advanced features.”
+
+**Bad:** “Payment.amount > maxLimit throws ValidationError”  
+**Good:** “Payments cannot exceed the maximum allowed for the user's account level.”
 
 Process each file systematically and conclude with "[RULE_EXTRACTION_COMPLETE]"`;
   }
@@ -232,7 +244,7 @@ Process each file systematically and conclude with "[RULE_EXTRACTION_COMPLETE]"`
     return `
 You are a technical documentation specialist creating customer support materials.
 
-Your task is to synthesize all the business rules extracted from the previous phase into one comprehensive, well-organized customer support guide.
+Your task is to synthesize all the business rules extracted from the previous phase into one comprehensive, well-organized customer support guide in a way that our support agent can use to answer user questions.
 
 Requirements:
 - Organize rules into logical categories (User Management, Authentication, Business Logic, Security Rules, Workflow Rules)
@@ -242,7 +254,7 @@ Requirements:
 - Remove any duplicate or overlapping rules
 - Create a logical flow that makes sense for support scenarios
 
-The final output should be a complete Markdown document that serves as a practical reference guide for customer support teams.
+The final output should be a complete Markdown document that serves as a practical reference guide for customer support teams without inclusion of emojis.
 
 Conclude with "[DOCUMENTATION_SYNTHESIS_COMPLETE]"`;
   }
