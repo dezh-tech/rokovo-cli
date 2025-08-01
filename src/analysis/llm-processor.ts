@@ -1,12 +1,5 @@
 import { generateText, LanguageModelV1, ToolSet } from 'ai';
-import { z } from 'zod';
-import {
-  llmObjectGeneratedSchema,
-  BusinessRule,
-  LLMAnalysisError,
-  LLMConfig,
-  LLMConfigSchema,
-} from '../types';
+import { BusinessRule, LLMAnalysisError, LLMConfig, LLMConfigSchema } from '../types';
 import { createOpenAICompatible, OpenAICompatibleProvider } from '@ai-sdk/openai-compatible';
 import { LangfuseExporter } from 'langfuse-vercel';
 import { NodeSDK } from '@opentelemetry/sdk-node';
@@ -68,29 +61,80 @@ export class LLMProcessor {
     this.model = this.provider(this.config.model);
   }
 
-  async analyze(toolSet: ToolSet): Promise<BusinessRule[]> {
+  async analyze(toolSet: ToolSet): Promise<void> {
     try {
-      console.log('Starting LLM analysis with telemetry enabled...');
-
-      const response = await generateText({
+      // Phase 1: Repository Discovery - Identify files containing business logic
+      const repositoryDiscoveryResult = await generateText({
         model: this.model,
-        system: this.getPrompt(),
-        prompt: 'Extract business rules from the codebase',
+        system: this.getRepositoryDiscoveryPrompt(),
+        prompt: 'start',
         toolChoice: 'auto',
         tools: toolSet,
         maxSteps: this.config.maxSteps,
+        stopSequences: ['[REPOSITORY_DISCOVERY_COMPLETE]'],
         experimental_telemetry: {
           isEnabled: true,
-          functionId: 'khodkar-business-rules-analysis',
-          metadata: {
-            version: '1.0.4',
-            analysisType: 'business-rules-extraction',
-            maxSteps: this.config.maxSteps,
-          },
+          functionId: 'khodkar-business-rules-repository-discovery',
         },
       });
 
-      console.log('LLM analysis completed, flushing traces to Langfuse...');
+      console.log('Phase 1 (Repository Discovery) completed');
+      console.log(repositoryDiscoveryResult.text);
+
+      try {
+        await this.exporter.forceFlush();
+        console.log('Successfully flushed traces to Langfuse');
+      } catch (flushError) {
+        console.warn('Failed to flush traces to Langfuse:', flushError);
+      }
+
+      // Phase 2: Rule Extraction - Extract business rules from identified files
+      const ruleExtractionResult = await generateText({
+        model: this.model,
+        system: this.getRuleExtractionPrompt(),
+        prompt: `Based on the repository discovery results:
+${repositoryDiscoveryResult.text}
+
+Now proceed to extract business rules from the identified files.`,
+        toolChoice: 'auto',
+        tools: toolSet,
+        maxSteps: this.config.maxSteps,
+        stopSequences: ['[RULE_EXTRACTION_COMPLETE]'],
+        experimental_telemetry: {
+          isEnabled: true,
+          functionId: 'khodkar-business-rules-rule-extraction',
+        },
+      });
+
+      console.log('Phase 2 (Rule Extraction) completed');
+      console.log(ruleExtractionResult.text);
+
+      try {
+        await this.exporter.forceFlush();
+        console.log('Successfully flushed traces to Langfuse');
+      } catch (flushError) {
+        console.warn('Failed to flush traces to Langfuse:', flushError);
+      }
+
+      // Phase 3: Documentation Synthesis - Combine extracted rules into coherent documentation
+      const documentationSynthesisResult = await generateText({
+        model: this.model,
+        system: this.getDocumentationSynthesisPrompt(),
+        prompt: `Based on the rule extraction results:
+${ruleExtractionResult.text}
+
+Now synthesize all extracted rules into a coherent customer support guide.`,
+        maxSteps: this.config.maxSteps,
+        stopSequences: ['[DOCUMENTATION_SYNTHESIS_COMPLETE]'],
+        experimental_telemetry: {
+          isEnabled: true,
+          functionId: 'khodkar-business-rules-documentation-synthesis',
+        },
+      });
+
+      console.log('Phase 3 (Documentation Synthesis) completed');
+
+      console.log(documentationSynthesisResult.text);
 
       // Force flush the traces to Langfuse
       try {
@@ -99,25 +143,6 @@ export class LLMProcessor {
       } catch (flushError) {
         console.warn('Failed to flush traces to Langfuse:', flushError);
       }
-
-      const text = response.text;
-      console.log(`LLM Analysis completed with ${response.steps?.length || 0} steps`);
-      console.log('Final response:', JSON.stringify(response.text));
-
-      // Extract JSON from text using regex
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new LLMAnalysisError('Failed to extract JSON from LLM response', {
-          responseText: text,
-          stepsUsed: response.steps?.length || 0,
-        });
-      }
-
-      const extractedData = JSON.parse(jsonMatch[0]);
-      const result = llmObjectGeneratedSchema.parse(extractedData);
-
-      console.log(`Successfully extracted ${result.rules.length} business rules`);
-      return result.rules;
     } catch (error) {
       if (error instanceof LLMAnalysisError) {
         throw error;
@@ -150,39 +175,75 @@ export class LLMProcessor {
     }
   }
 
-  getPrompt() {
+  /**
+   * Phase 1: Repository Discovery
+   * Identifies files in the repository that likely contain business logic rules
+   */
+  getRepositoryDiscoveryPrompt() {
     return `
-You are an expert analyst. Your task is to read a codebase and produce a Markdown support guide that explains its business rules in simple, user‑facing language.
+You are an expert code analyst specializing in business rule discovery.
 
-Steps:
+Your task is to identify all source code files in the repository that likely contain business logic rules such as:
+- Validation rules and constraints
+- Enum definitions and constants
+- API rate limits and quotas
+- Authorization and permission rules
+- Business workflow constraints
+- Data validation schemas
+- Configuration limits
 
-1. Always, use sequential-thinking tool to plan your analysis steps.
-2. Use get_directory_tree to explore the repository.  
-3. For each relevant source code file found:  
-   a. Use read_file to examine its contents.  
-   b. Identify validation logic, enum values, settings, API constraints, calculations, rate limits, authorization logic, etc.  
-4. For each rule found, write a Markdown section containing:
-   - A short heading (e.g. “User password requirements”, “Payment limits”).
-   - A clear description: *what* the rule is and *why* it matters from the user or customer support perspective.
-   - Example if relevant (e.g. "If payment > €10,000, system rejects it").
-   - Do not describe code internals — focus on user‑facing consequences.
+Use the get_directory_tree tool to explore the repository structure, then use minimal read_file calls only to confirm file relevance.
+Do NOT analyze the actual code content yet - that will happen in the next phase.
 
-- Write in active voice and use simple sentences.
-- Write for a support agent who has never seen the code.
-- Never skip using the tools—they ensure accuracy.
-- Do not expose internal package names or low-level implementation details.
-- Do not inspect system or metadata files (e.g. node_modules/, package.json, Dockerfiles)—only source files.
+When complete, output a numbered list of file paths that contain business logic rules and end with "[REPOSITORY_DISCOVERY_COMPLETE]"`;
+  }
 
-Examples:
+  /**
+   * Phase 2: Rule Extraction
+   * Extracts business rules from the files identified in Phase 1
+   */
+  getRuleExtractionPrompt() {
+    return `
+You are an expert business rule analyst.
 
-**Bad:** “The validateEmail() method checks regex '^[^@]+@…'”  
-**Good:** “User emails must match proper format (like user@example.com) before account creation is allowed.”
+Based on the files identified in the repository discovery phase, your task is to:
 
-**Bad:** “user.role==='admin' gives access”  
-**Good:** “Only administrators can access advanced features.”
+1. Read the full contents of each identified file using read_file
+2. Extract all business rule statements from the code
+3. Format each rule in Markdown with:
+   - A clear heading (e.g., "Payment Processing Limits", "User Account Validation")
+   - A brief description explaining what the rule does and why it matters for customer support
+   - A practical example when relevant (e.g., "If payment exceeds €10,000, the system requires additional verification")
 
-**Bad:** “Payment.amount > maxLimit throws ValidationError”  
-**Good:** “Payments cannot exceed the maximum allowed for the user's account level.”
-`;
+Guidelines:
+- Write in active voice using simple, non-technical language
+- Focus on user-facing behavior and customer impact
+- Avoid implementation details, code snippets, or internal technical jargon
+- Organize rules by functional area when possible
+
+Process each file systematically and conclude with "[RULE_EXTRACTION_COMPLETE]"`;
+  }
+
+  /**
+   * Phase 3: Documentation Synthesis
+   * Combines all extracted rules into a coherent customer support guide
+   */
+  getDocumentationSynthesisPrompt() {
+    return `
+You are a technical documentation specialist creating customer support materials.
+
+Your task is to synthesize all the business rules extracted from the previous phase into one comprehensive, well-organized customer support guide.
+
+Requirements:
+- Organize rules into logical categories (User Management, Authentication, Business Logic, Security Rules, Workflow Rules)
+- Ensure each rule has a clear heading, description, and example where applicable
+- Write for customer support agents who need to quickly understand system behavior
+- Use active voice and simple language throughout
+- Remove any duplicate or overlapping rules
+- Create a logical flow that makes sense for support scenarios
+
+The final output should be a complete Markdown document that serves as a practical reference guide for customer support teams.
+
+Conclude with "[DOCUMENTATION_SYNTHESIS_COMPLETE]"`;
   }
 }

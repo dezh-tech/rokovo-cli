@@ -115,41 +115,10 @@ export class KhodkarCLI {
       const tools = await this.mcpManager.getTools();
       const businessRules = await llmProcessor.analyze(tools);
 
-      if (options.verbose) {
-        console.log(chalk.green(`✓ Extracted ${businessRules.length} business rules`));
-      }
-
-      // Create analysis result
-      const analysisResult: AnalysisResult = {
-        analysisDate: new Date().toISOString(),
-        businessRules,
-        summary: {
-          totalRules: businessRules.length,
-          highPriorityRules: businessRules.filter(rule => rule.priority === 'high').length,
-          userFacingRules: businessRules.filter(rule => rule.userFacing).length,
-        },
-      };
-
-      // Format and save output
-      progressTracker.updatePhase('formatting', 'Formatting output...');
-      const formatter = new OutputFormatter({
-        includeMetadata: true,
-        includeSourceReferences: true,
-        groupByCategory: true,
-        sortByPriority: true,
-      });
-
-      await formatter.formatAndSave(analysisResult, options.output, options.format);
 
       progressTracker.succeed('Analysis complete!');
       console.log(chalk.green('✅ Analysis complete!'));
       console.log(chalk.blue(`📄 Output saved to: ${options.output}`));
-
-      // Print summary
-      console.log('\n' + chalk.bold('Summary:'));
-      console.log(`  • Business rules extracted: ${analysisResult.summary.totalRules}`);
-      console.log(`  • High priority rules: ${analysisResult.summary.highPriorityRules}`);
-      console.log(`  • User-facing rules: ${analysisResult.summary.userFacingRules}`);
 
       // Cleanup resources
       await llmProcessor.cleanup();
