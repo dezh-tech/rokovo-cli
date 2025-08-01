@@ -76,7 +76,7 @@ export class LLMProcessor {
         model: this.model,
         system: this.getPrompt(),
         prompt: 'Extract business rules from the codebase',
-        toolChoice: 'required',
+        toolChoice: 'auto',
         tools: toolSet,
         maxSteps: this.config.maxSteps,
         experimental_telemetry: {
