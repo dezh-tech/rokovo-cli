@@ -13,16 +13,21 @@ export class LLMProcessor {
   private sdk: NodeSDK;
 
   constructor(llmConfig: LLMConfig) {
+    // Load environment variables from .env file
+    require('dotenv').config();
+
     // Initialize Langfuse exporter with debug enabled for troubleshooting
-    // Use environment variables if available, otherwise fall back to hardcoded values
+    // Use environment variables loaded from .env file
     this.exporter = new LangfuseExporter({
-      secretKey: process.env.LANGFUSE_SECRET_KEY,
-      publicKey: process.env.LANGFUSE_PUBLIC_KEY,
-      baseUrl: process.env.LANGFUSE_BASEURL,
+      secretKey: 'sk-lf-ff0b250e-70c4-4268-9fb4-ef84d73a99a6',
+      publicKey: 'pk-lf-20e4c065-a45b-4f57-aa2b-cb626ca48ba4',
+      baseUrl: 'https://cloud.langfuse.com',
       flushAt: 1,
       flushInterval: 1000,
       // debug: true // Enable debug logging to troubleshoot issues
     });
+
+    console.log('Langfuse exporter initialized:', process.env.LANGFUSE_PUBLIC_KEY);
 
     // Initialize OpenTelemetry SDK
     this.sdk = new NodeSDK({
@@ -181,8 +186,6 @@ Now synthesize all extracted rules into a coherent customer support guide.`,
    */
   getRepositoryDiscoveryPrompt() {
     return `
-yOU 
-
 Your task is to identify all source code files in the repository that likely contain business logic rules such as:
 - Validation rules and constraints
 - Enum definitions and constants
@@ -208,8 +211,7 @@ You are an expert analyst. Your task is to read a codebase and produce a Markdow
 
 Based on the files identified in the repository discovery phase, your task is to:
 
-1. Use **sequential_thinking**, create_entities, create_relations, add_observations, delete_entities, delete_observations, delete_relations, read_graph, search_nodes, open_nodes to plan your process
-2. Read the full contents of each identified file using read_text_file
+1. Use Memory tools: create_entities, create_relations, add_observations, delete_entities, delete_observations, delete_relations, read_graph, search_nodes, open_nodes to store the rules, query them and make relation to provide better output
 3. Extract all business rule statements from the code
 4. Format each rule in Markdown with:
    - A clear heading (e.g., "Payment Processing Limits", "User Account Validation")
@@ -233,7 +235,8 @@ Examples:
 **Bad:** “Payment.amount > maxLimit throws ValidationError”  
 **Good:** “Payments cannot exceed the maximum allowed for the user's account level.”
 
-Process each file systematically and conclude with "[RULE_EXTRACTION_COMPLETE]"`;
+When complete process each file systematically, output a list of business logic rules"`;
+
   }
 
   /**
