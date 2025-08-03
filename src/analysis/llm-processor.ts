@@ -19,8 +19,8 @@ export class LLMProcessor {
     // Initialize Langfuse exporter with debug enabled for troubleshooting
     // Use environment variables loaded from .env file
     this.exporter = new LangfuseExporter({
-      secretKey: 'sk-lf-ff0b250e-70c4-4268-9fb4-ef84d73a99a6',
-      publicKey: 'pk-lf-20e4c065-a45b-4f57-aa2b-cb626ca48ba4',
+      secretKey: '',
+      publicKey: '',
       baseUrl: 'https://cloud.langfuse.com',
       flushAt: 1,
       flushInterval: 1000,
