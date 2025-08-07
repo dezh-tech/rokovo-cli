@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-import { KhodkarCLI } from "./cli/commands";
+import { RokovoCLI } from "./cli/commands";
 
 
 async function main(): Promise<void> {
-  const cli = new KhodkarCLI();
+  const cli = new RokovoCLI();
   await cli.run(process.argv);
 }
 

@@ -126,32 +126,32 @@ export const OutputSchema = z.union([MarkdownOutputSchema, JSONOutputSchema]);
 export type Output = z.infer<typeof OutputSchema>;
 
 // Error Types
-export class KhodkarError extends Error {
+export class RokovoError extends Error {
   constructor(
     message: string,
     public code: string,
     public details?: Record<string, unknown>
   ) {
     super(message);
-    this.name = 'KhodkarError';
+    this.name = 'RokovoError';
   }
 }
 
-export class FileSystemError extends KhodkarError {
+export class FileSystemError extends RokovoError {
   constructor(message: string, details?: Record<string, unknown>) {
     super(message, 'FILESYSTEM_ERROR', details);
     this.name = 'FileSystemError';
   }
 }
 
-export class LLMAnalysisError extends KhodkarError {
+export class LLMAnalysisError extends RokovoError {
   constructor(message: string, details?: Record<string, unknown>) {
     super(message, 'LLM_ANALYSIS_ERROR', details);
     this.name = 'LLMAnalysisError';
   }
 }
 
-export class MCPServerError extends KhodkarError {
+export class MCPServerError extends RokovoError {
   constructor(message: string, details?: Record<string, unknown>) {
     super(message, 'MCP_SERVER_ERROR', details);
     this.name = 'MCPServerError';

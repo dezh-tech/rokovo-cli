@@ -59,7 +59,7 @@ export class LLMProcessor {
     }
 
     this.provider = createOpenAICompatible({
-      name: 'Khodkar-cli',
+      name: 'Rokovo-cli',
       apiKey: this.config.apiKey,
       baseURL: this.config.baseUrl,
     });
@@ -79,7 +79,7 @@ export class LLMProcessor {
         stopSequences: ['[REPOSITORY_DISCOVERY_COMPLETE]'],
         experimental_telemetry: {
           isEnabled: true,
-          functionId: 'khodkar-business-rules-repository-discovery',
+          functionId: 'rokovo-business-rules-repository-discovery',
         },
       });
 
@@ -107,7 +107,7 @@ Now proceed to extract business rules from the identified files.`,
         stopSequences: ['[RULE_EXTRACTION_COMPLETE]'],
         experimental_telemetry: {
           isEnabled: true,
-          functionId: 'khodkar-business-rules-rule-extraction',
+          functionId: 'rokovo-business-rules-rule-extraction',
         },
       });
 

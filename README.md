@@ -1,14 +1,14 @@
-# Khodkar CLI
+# Rokovo CLI
 
-Khodkar CLI is a powerful tool developed by [khodkar.dezh.tech](https://khodkar.dezh.tech) that helps teams extract business flow and logic documentation from their codebase. It's specifically designed to create comprehensive knowledge base documentation that helps support teams understand the business rules embedded in the code.
+Rokovo CLI is a powerful tool developed by [Rokovo](https://Rokovo.io) that helps teams extract business flow and logic documentation from their codebase. It's specifically designed to create comprehensive knowledge base documentation that helps support teams understand the business rules embedded in the code.
 <p align="center">
-  <img src="assets/logo.png" alt="Khodkar CLI Logo" width="300">
+  <img src="assets/logo.png" alt="Rokovo CLI Logo" width="300">
 </p>
 ## Quick Start
 
 ```bash
-npm install -g khodkar-cli
-khodkar analyze --directory ./my-project --output ./docs.md \
+npm install -g rokovo-cli
+rokovo analyze --directory ./my-project --output ./docs.md \
   --llm-base-url https://api.openai.com/v1 \
   --llm-api-key your-api-key-here \
   --llm-model gpt-4o-mini
@@ -23,7 +23,7 @@ khodkar analyze --directory ./my-project --output ./docs.md \
 ## Basic Usage
 
 ```bash
-khodkar analyze \
+rokovo analyze \
   --directory ./my-project \
   --output ./business-rules.md \
   --llm-base-url https://api.openai.com/v1 \
@@ -47,4 +47,4 @@ MIT License - see LICENSE file for details.
 
 ## Support
 
-Visit [khodkar.dezh.tech](https://khodkar.dezh.tech) for support or create an issue on GitHub.
+Visit [Rokovo](https://Rokovo.io) for support or create an issue on GitHub.

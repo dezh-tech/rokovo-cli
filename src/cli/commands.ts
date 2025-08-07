@@ -17,7 +17,7 @@ import { version } from '../../package.json';
 import { McpManager } from '../mcp/manager';
 import { writeFile, writeFileSync } from 'fs';
 
-export class KhodkarCLI {
+export class RokovoCLI {
   private program: Command;
   private mcpManager: McpManager;
 
@@ -29,7 +29,7 @@ export class KhodkarCLI {
 
   private setupCommands(): void {
     this.program
-      .name('khodkar')
+      .name('rokovo')
       .description(
         'Extract business rules and logic from codebases for customer support knowledge bases'
       )

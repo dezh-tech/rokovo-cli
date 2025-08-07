@@ -4,7 +4,7 @@ set -e
 echo "🚀 Starting npm package release process..."
 
 # Navigate to project directory
-cd /home/balthazar/codes/khodkar-cli
+cd /home/balthazar/codes/rokovo-cli
 
 # Clean and build
 echo "🧹 Cleaning and building..."
@@ -38,7 +38,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     npm publish
     
     echo "✅ Package published successfully!"
-    echo "📋 You can now install it with: npm install -g khodkar-cli"
+    echo "📋 You can now install it with: npm install -g rokovo-cli"
 else
     echo "❌ Publishing cancelled."
 fi
