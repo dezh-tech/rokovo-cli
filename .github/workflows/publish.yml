@@ -8,6 +8,8 @@ on:
 jobs:
   build-and-publish:
     name: Build and publish
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
 
     steps:
