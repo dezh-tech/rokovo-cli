@@ -1,0 +1,91 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rokovo"
+description = "Rokovo CLI"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+  { name = "Rokovo", email = "info@rokovo.io" },
+]
+keywords = ["cli", "rokovo", "ai", "ai-agents", "agents", "langchain"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Environment :: Console",
+]
+# Use dynamic versioning sourced from the package __init__.py
+dynamic = ["version"]
+
+# Runtime dependencies for the CLI
+# Pin to compatible major versions to avoid breaking changes
+dependencies = [
+  "typer>=0.12,<1.0",
+  "jinja2>=3.1,<4.0",
+  "langchain>=0.2,<0.3",
+  "langchain-community>=0.2,<0.3",
+  "langchain-core>=0.2,<0.3",
+  "langchain-openai>=0.2,<0.4",
+  "chromadb>=1.0,<2.0",
+  "sentence-transformers>=2.2,<3.0",
+]
+
+[project.optional-dependencies]
+# Development-only tools
+dev = [
+  "ruff>=0.4.2",
+  "build>=1.2.1",
+  "twine>=5.1.1",
+]
+
+[project.urls]
+Homepage = "https://rokovo.io"
+Repository = "https://github.com/dezh-tech/rokovo-cli"
+Issues = "https://github.com/dezh-tech/rokovo-cli/issues"
+
+[project.scripts]
+# Expose the CLI as `rokovo`
+rokovo = "cli:app"
+
+[tool.hatch.version]
+path = "src/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+# Install modules from `src/` at the package root and include data files (e.g., prompts)
+only-include = ["src"]
+[tool.hatch.build.targets.wheel.sources]
+"src" = ""
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+# Treat Ruff as both linter and formatter
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+
+[tool.ruff.lint]
+# A sensible default rule-set: pycodestyle (E/W), Pyflakes (F), isort (I),
+# pyupgrade (UP), and flake8-bugbear (B)
+select = ["E", "W", "F", "I", "UP", "B"]
+# Example ignores can be added later if needed
+ignore = []
+
