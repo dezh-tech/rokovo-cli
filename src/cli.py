@@ -13,7 +13,7 @@ def faq(
         ".", "--root-dir", "-r", help="Root directory of the codebase to scan"
     ),
     context_dir: str = typer.Option(
-        None, "--context-dir", "-r", help="Directory of markdown context file"
+        None, "--context-dir", help="Directory of markdown context file"
     ),
     model: str = typer.Option("openai/gpt-4.1", "--model", help="LLM model identifier"),
     temperature: float = typer.Option(0.5, "--temperature", "-t", help="Sampling temperature"),
