@@ -40,6 +40,11 @@ dependencies = [
   "langchain-openai",
   "chromadb",
   "sentence-transformers",
+  "xdg-base-dirs",
+  "tomllib",
+  "tomli",
+  "langchain_huggingface",
+  "langchain_chroma",
 ]
 
 [project.optional-dependencies]
