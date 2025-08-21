@@ -404,8 +404,6 @@ def call_agent(
 
     template = Template(faq_sys_prompt)
 
-    print(template.render(context=context))
-
     prompt = ChatPromptTemplate.from_messages(
         [
             (
