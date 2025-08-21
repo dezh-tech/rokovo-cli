@@ -13,5 +13,6 @@
 
 ## Features
 
+* [ ] 2 interactive modes: developer and user. That can be determined with `--mode` flag.
 * [ ] Running a local model built-in instead of OpenRouter.
 * [ ] Running on CI/CD pipelines and update the docs based on code changes.
