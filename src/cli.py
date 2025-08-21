@@ -12,8 +12,42 @@ else:
 
 import agent
 import utils
+from __init__ import __version__
 
-app = typer.Typer(help="Rokovo CLI - A modern Python CLI template.")
+app = typer.Typer(
+    help="""
+Rokovo CLI - A simple AI agent that help you to
+ write and extract documentation for both users and devs.
+    """,
+    no_args_is_help=True,
+)
+
+
+def _version_callback(value: bool):
+    if value:
+        typer.echo(f"rokovo {__version__}")
+        raise typer.Exit()
+
+
+@app.callback(invoke_without_command=True)
+def _root(
+    version: Optional[bool] = typer.Option(
+        None,
+        "--version",
+        "-V",
+        help="Show Rokovo version and exit",
+        callback=_version_callback,
+        is_eager=True,
+    )
+):
+    # This function is intentionally empty: options are handled by callbacks
+    pass
+
+
+@app.command("version")
+def version_command() -> None:
+    """Show Rokovo version."""
+    typer.echo(f"rokovo {__version__}")
 
 
 @app.command("faq")
@@ -41,7 +75,7 @@ def faq(
             """,
     ),
 ) -> None:
-    """Extracts a list of FAQs from your code base."""
+    """Extracts a list of end-user FAQs from your code base."""
     config_path = Path(root_dir) / "rokovo.toml"
 
     cfg = {}
@@ -109,7 +143,7 @@ def interactive(
             """,
     ),
 ) -> None:
-    """Run a simple REPL that echoes user input. Loads config the same way as 'faq'."""
+    """Run a simple REPL that answers your questions about the codebase"""
     config_path = Path(root_dir) / "rokovo.toml"
 
     cfg = {}
@@ -163,11 +197,11 @@ def init(
         ".", "--root-dir", "-r", help="Root directory of the codebase to init the Rokovo"
     ),
 ) -> None:
-    """Extracts a list of FAQs from your code base."""
+    """Initialize Rokovo CLI files in your codebase."""
     project_name = utils.get_top_directory(root_dir)
-    config_path = Path(__file__).parent / ".." / "example" / "rokovo.toml"
-    ignore_path = Path(__file__).parent / ".." / "example" / ".rokovoignore"
-    context_path = Path(__file__).parent / ".." / "example" / "rokovo_context.md"
+    config_path = Path(__file__).parent / "config" / "rokovo.toml"
+    ignore_path = Path(__file__).parent / "config" / ".rokovoignore"
+    context_path = Path(__file__).parent / "config" / "rokovo_context.md"
 
     config_file = ""
     with open(config_path, encoding="utf-8") as file:

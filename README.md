@@ -33,7 +33,7 @@ Context file is a markdown file that contains a high level description of your p
 3. Important keywords and terminologies.
 4. Usage specific context, for example if you want to to auto extract FAQs: set of questions as example to help agent with finding questions and answers.
 
-An example context file can be found on [examples_context.md](./example/rokovo_context.md).
+An example context file can be found on [examples_context.md](./src/config/rokovo_context.md).
 
 #### FAQ extraction
 
