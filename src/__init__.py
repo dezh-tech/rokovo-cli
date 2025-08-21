@@ -1,4 +1,4 @@
 __all__ = ["__version__"]
 
-# Single source of truth for version
-__version__ = "0.1.0"
+# see: https://semver.org
+__version__ = "0.2.0"

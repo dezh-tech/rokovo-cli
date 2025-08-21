@@ -1,12 +1,13 @@
 import os
+import sys
 from pathlib import Path
 from typing import Optional
 
 import typer
 
-try:
-    import tomllib  # Python 3.11+
-except Exception:  # pragma: no cover - fallback for Python <3.11
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
     import tomli as tomllib
 
 import agent
