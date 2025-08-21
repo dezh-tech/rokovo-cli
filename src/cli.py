@@ -38,7 +38,7 @@ def _root(
         help="Show Rokovo version and exit",
         callback=_version_callback,
         is_eager=True,
-    )
+    ),
 ):
     # This function is intentionally empty: options are handled by callbacks
     pass
