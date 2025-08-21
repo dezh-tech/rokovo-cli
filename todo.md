@@ -10,6 +10,7 @@
 * [ ] Extract `Release notes` from code and git history.
 * [ ] Extract `Changelog` from code and git history.
 * [ ] Extract `Contributing guide` from code.
+* [ ] Generate `README.md` file.
 
 ## Features
 
