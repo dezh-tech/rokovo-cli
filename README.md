@@ -40,7 +40,7 @@ An example context file can be found on [examples_context.md](./example/rokovo_c
 To extract FAQs from your codebase, run the following command:
 
 ```sh
-rokovo --context-dir ./context.md --root-dir ./path/to/project --api-key <your-openrouter-api-key>
+rokovo --context-dir ./context.md --root-dir ./path/to/project --api-key <your-openrouter-api-key> --re-index true # if you have changed your code base use --re-index
 ```
 
 >[!NOTE]
