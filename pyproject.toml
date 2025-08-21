@@ -41,7 +41,6 @@ dependencies = [
   "chromadb",
   "sentence-transformers",
   "xdg-base-dirs",
-  "tomllib",
   "tomli >=1.1.0 ; python_version < \"3.11\"",
   "langchain_huggingface",
   "langchain_chroma",
