@@ -172,7 +172,7 @@ def extract_faq(
         loader_cls=TextLoader,
         exclude=excludes,
         recursive=True,
-        silent_errors=True,
+        silent_errors=False,
         loader_kwargs={"autodetect_encoding": True},
     )
     docs = loader.load()
@@ -272,7 +272,7 @@ def extract_faq(
     # Create the tool-calling agent and wrap it in an AgentExecutor
     agent = create_tool_calling_agent(llm=llm, tools=tools, prompt=prompt)
     agent_executor = AgentExecutor(
-        agent=agent, tools=tools, verbose=False, handle_parsing_errors=True
+        agent=agent, tools=tools, verbose=True, handle_parsing_errors=True
     )
 
     faq_user_prompt = ""
