@@ -227,9 +227,280 @@ def init(
         f.write(context_file)
 
 
+@app.command("improve-desc")
+def improve_desc(
+    root_dir: str = typer.Option(
+        ".",
+        "--root-dir",
+        "-r",
+        help="Root directory of the codebase (used to resolve relative paths)"
+    ),
+    desc_path: str = typer.Option(
+        "desc.md",
+        "--desc",
+        help="Path to the description markdown file to improve"
+    ),
+    model: str = typer.Option(
+        "openai/gpt-4.1",
+        "--model",
+        help="LLM model identifier"
+    ),
+    temperature: float = typer.Option(
+        0.5,
+        "--temperature",
+        "-t",
+        help="Sampling temperature"
+    ),
+    base_url: str = typer.Option(
+        "https://openrouter.ai/api/v1",
+        "--base-url",
+        help="Base URL for the LLM API"
+    ),
+    api_key: Optional[str] = typer.Option(
+        None,
+        "--api-key",
+        help="API key for the LLM provider",
+        envvar="ROKOVO_API_KEY"
+    ),
+    in_place: bool = typer.Option(
+        False,
+        "--in-place",
+        help="Overwrite the original description file with the improved version"
+    ),
+    output: Optional[str] = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Write improved content to this output file"
+    ),
+) -> None:
+    """
+    Read a project description markdown (desc.md),
+    ask the agent to improve it as a structured context file,
+    and print or save the improved markdown.
+
+    The improved file will follow the context template used by Rokovo
+    (project name, important files, keywords, example questions).
+    """
+    config_path = Path(root_dir) / "rokovo.toml"
+
+    cfg = {}
+    if config_path.exists():
+        with open(config_path, "rb") as f:
+            cfg = tomllib.load(f)
+
+    llm_cfg = cfg.get("llm", {}) if isinstance(cfg, dict) else {}
+
+    model = model or llm_cfg.get("model", model)
+    base_url = base_url or llm_cfg.get("base_url", base_url)
+    temperature = temperature if temperature is not None else llm_cfg.get(
+        "temperature", temperature
+    )
+
+    api_key = api_key or os.environ.get("ROKOVO_API_KEY")
+
+    # Resolve description file path
+    desc_file = Path(desc_path)
+    if not desc_file.is_absolute():
+        desc_file = Path(root_dir) / desc_file
+
+    if not desc_file.exists():
+        raise Exception(f"Description file not found: {desc_file}")
+
+    desc_content = desc_file.read_text(encoding="utf-8")
+
+    # Construct a clear instruction for the agent to produce an improved context markdown
+    user_query = (
+        "You are a documentation and context generation assistant. "
+        "You have access to tools that can search the indexed codebase and read files. "
+        "Use these tools extensively to understand the project's purpose, structure, and functionality. "
+        "From that understanding, produce a high-quality, comprehensive, and machine-usable context file.\n\n"
+        "Your task is to rewrite and expand the provided project description into a complete and precise documentation summary.\n\n"
+        "Follow these instructions carefully:\n\n"
+        "1. Analyze the codebase using your available tools to identify what the project does, its purpose, and its overall flow.\n"
+        "2. Write a clear and concise Markdown document that describes the project in a non-technical way, focusing on what it is and what it provides — not how it works internally.\n"
+        "3. Include a section called **important files**, listing only the most relevant files or modules with a short, plain-language explanation of what each does.\n"
+        "4. If the project is a client-side codebase, also include the important routes or paths that help end users understand where features or options can be found.\n"
+        "5. Add a section called **Questions examples**, listing realistic and varied example questions that users might ask about the project.\n\n"
+        "⚠️ Important:\n"
+        "- Do NOT include deep technical implementation details, internal function names, or dependencies.\n"
+        "- Keep it simple, descriptive, and user-oriented.\n"
+        "- The output must be valid Markdown and follow this exact structure:\n\n"
+        "# <Project name> project description\n\n"
+        "A detailed, but concise description of the project, summarizing its purpose, architecture, and capabilities.\n\n"
+        "## important files\n\n"
+        "- file path: short explanation\n\n"
+        "## Questions examples\n\n"
+        "- Example question 1\n"
+        "- Example question 2\n"
+        "- Example question 3\n\n"
+        "Do NOT include any commentary or notes outside the Markdown block.\n\n"
+        "Original content:\n\n" + desc_content
+    )
+
+    # Call the agent to get an improved version
+    try:
+        result = agent.call_agent(
+            root_dir=root_dir,
+            model=model,
+            temperature=temperature,
+            base_url=base_url,
+            api_key=api_key,
+            context=desc_content,
+            re_index=False,
+            user_query=user_query,
+        )
+    except Exception:
+        raise
+
+    # Best-effort extraction of textual output
+    improved = None
+    try:
+        # agent.call_agent often returns a mapping with an 'output' key
+        improved = result["output"]
+    except Exception:
+        try:
+            # fallback to attribute access
+            improved = getattr(result, "output", None)
+        except Exception:
+            improved = None
+
+    if improved is None:
+        # Last resort: string representation
+        improved = str(result)
+
+    # Save or print
+    if in_place:
+        desc_file.write_text(improved, encoding="utf-8")
+        typer.echo(f"Wrote improved description in place to {desc_file}")
+    elif output:
+        out_path = Path(output)
+        if not out_path.is_absolute():
+            out_path = Path(root_dir) / out_path
+        out_path.write_text(improved, encoding="utf-8")
+        typer.echo(f"Wrote improved description to {out_path}")
+    else:
+        typer.echo(improved)
+
+
+@app.command("verify-context")
+def verify_context(
+    root_dir: str = typer.Option(
+        ".",
+        "--root-dir",
+        "-r",
+        help="Root directory of the codebase (used to resolve relative paths)"
+    ),
+    context_path: str = typer.Option(
+        "desc.md",
+        "--context",
+        help="Path to the context markdown file to verify"
+    ),
+    model: str = typer.Option(
+        "openai/gpt-4.1",
+        "--model",
+        help="LLM model identifier"
+    ),
+    temperature: float = typer.Option(
+        0.5,
+        "--temperature",
+        "-t",
+        help="Sampling temperature"
+    ),
+    base_url: str = typer.Option(
+        "https://openrouter.ai/api/v1",
+        "--base-url",
+        help="Base URL for the LLM API"
+    ),
+    api_key: Optional[str] = typer.Option(
+        None,
+        "--api-key",
+        help="API key for the LLM provider",
+        envvar="ROKOVO_API_KEY"
+    ),
+    output: Optional[str] = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Write verified content to this output file"
+    ),
+) -> None:
+    """
+    Verify the content of a context markdown file (from improve-desc or faq) against the codebase.
+    Fact-check all claims, fix any wrong info, and label unverifiable claims as suspicious.
+    """
+    config_path = Path(root_dir) / "rokovo.toml"
+    cfg = {}
+    if config_path.exists():
+        with open(config_path, "rb") as f:
+            cfg = tomllib.load(f)
+    llm_cfg = cfg.get("llm", {}) if isinstance(cfg, dict) else {}
+    model = model or llm_cfg.get("model", model)
+    base_url = base_url or llm_cfg.get("base_url", base_url)
+    temperature = temperature if temperature is not None else llm_cfg.get(
+        "temperature", temperature
+    )
+    api_key = api_key or os.environ.get("ROKOVO_API_KEY")
+    # Resolve context file path
+    ctx_file = Path(context_path)
+    if not ctx_file.is_absolute():
+        ctx_file = Path(root_dir) / ctx_file
+    if not ctx_file.exists():
+        raise Exception(f"Context file not found: {ctx_file}")
+    ctx_content = ctx_file.read_text(encoding="utf-8")
+    # Prompt for verifier agent
+    user_query = (
+        "You are a verifier agent. "
+        "Use code search and file reading tools to fact-check the provided Markdown context file "
+        "against the actual codebase. "
+        "Verify each description, claim, and example by finding supporting evidence in the code.\n\n"
+        "If a statement is incorrect, fix it. and mark is as **[✅ Fix]** and keep the original text with the fixed version "
+        "If no clear evidence is found, mark it as **[⚠️ Unverified]** and keep the original text. "
+        "Ensure the final output remains a valid, readable Markdown document with clear annotations.\n\n"
+        "Output: a corrected and annotated Markdown file that accurately reflects the project.\n\n"
+        "Context to verify:\n\n" + ctx_content
+    )
+    # Call the agent to get a verified version
+    try:
+        result = agent.call_agent(
+            root_dir=root_dir,
+            model=model,
+            temperature=temperature,
+            base_url=base_url,
+            api_key=api_key,
+            context=ctx_content,
+            re_index=False,
+            user_query=user_query,
+        )
+    except Exception:
+        raise
+    verified = None
+    try:
+        verified = result["output"]
+    except Exception:
+        try:
+            verified = getattr(result, "output", None)
+        except Exception:
+            verified = None
+    if verified is None:
+        verified = str(result)
+    if output:
+        out_path = Path(output)
+        if not out_path.is_absolute():
+            out_path = Path(root_dir) / out_path
+        out_path.write_text(verified, encoding="utf-8")
+        typer.echo(f"Wrote verified context to {out_path}")
+    else:
+        typer.echo(verified)
+
+
 def main() -> None:
     """Entry point for console_scripts."""
-    app()
+    try:
+        app()
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
